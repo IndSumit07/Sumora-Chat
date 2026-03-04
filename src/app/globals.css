@@ -1,26 +1,120 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ═══════════════════════════════════════════════
+   THEME TOKENS
+   Light: warm cream  #F6F2E9
+   Dark:  near-black  #141413
+   ═══════════════════════════════════════════════ */
+
+/* Light (default) */
+:root,
+[data-theme="light"] {
+  --bg-primary:    #F6F2E9;
+  --bg-secondary:  #EDE9DF;
+  --bg-surface:    rgba(246, 242, 233, 0.88);
+  --bg-pill:       rgba(20,  20,  19,  0.07);
+  --bg-hover:      rgba(20,  20,  19,  0.05);
+
+  --fg-primary:    #141413;
+  --fg-secondary:  #6B6860;
+  --fg-muted:      #9B9790;
+
+  --border:        rgba(20, 20, 19, 0.12);
+  --border-strong: rgba(20, 20, 19, 0.22);
+
+  --shadow-sm:     0 1px 3px rgba(20,20,19,0.08), 0 1px 2px rgba(20,20,19,0.06);
+  --shadow-md:     0 4px 20px rgba(20,20,19,0.10);
+
+  /* Typography */
+  --font-body:     var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-heading:  var(--font-heading), "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+/* Dark */
+[data-theme="dark"] {
+  --bg-primary:    #141413;
+  --bg-secondary:  #1C1C1A;
+  --bg-surface:    rgba(20, 20, 19, 0.88);
+  --bg-pill:       rgba(246, 242, 233, 0.08);
+  --bg-hover:      rgba(246, 242, 233, 0.06);
+
+  --fg-primary:    #F6F2E9;
+  --fg-secondary:  #9B9790;
+  --fg-muted:      #6B6860;
+
+  --border:        rgba(246, 242, 233, 0.12);
+  --border-strong: rgba(246, 242, 233, 0.22);
+
+  --shadow-sm:     0 1px 3px rgba(0,0,0,0.3),  0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md:     0 4px 20px rgba(0,0,0,0.35);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--fg-primary);
+  --font-sans:        var(--font-body);
+  --font-display:     var(--font-heading);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ═══════════════════════════════════════════════
+   SMOOTH THEME TRANSITIONS
+   All elements cross-fade colors when data-theme flips.
+   Skip transform/opacity so animations stay instant.
+   ═══════════════════════════════════════════════ */
+*,
+*::before,
+*::after {
+  transition:
+    background-color 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    color            0.40s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color     0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow       0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    fill             0.40s cubic-bezier(0.4, 0, 0.2, 1),
+    stroke           0.40s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent theme transitions from fighting framer-motion */
+.no-theme-transition,
+.no-theme-transition * {
+  transition: none !important;
+}
+
+/* ═══════════════════════════════════════════════
+   BASE
+   ═══════════════════════════════════════════════ */
+html {
+  color-scheme: light dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--fg-primary);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--fg-primary);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ═══════════════════════════════════════════════
+   MARQUEE — continuous right-to-left scroll
+   Pointer-events on the wrapper block hover
+   from ever pausing the animation.
+   ═══════════════════════════════════════════════ */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }
