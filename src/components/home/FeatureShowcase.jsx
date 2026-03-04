@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useTheme } from "./ThemeProvider";
-import { DashboardMockup, LIGHT, DARK } from "./HeroSection";
+import { useTheme } from "@/hooks/use-theme";
+import { DashboardMockup, LIGHT, DARK } from "@/components/home/HeroSection";
 
 const FEATURES = [
     {
@@ -187,7 +187,8 @@ export default function FeatureShowcase() {
                     position: "absolute",
                     top: "10%", right: "10%", width: "60%", height: "60%",
                     background: "radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 60%)",
-                    filter: "blur(60px)", pointerEvents: "none", zIndex: 0
+                    filter: "blur(60px)", pointerEvents: "none", zIndex: 0,
+                    willChange: "transform", transform: "translateZ(0)"
                 }} />
 
                 {/* Glass Border Wrapper bleeding out to the right */}
@@ -203,53 +204,10 @@ export default function FeatureShowcase() {
                     border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"}`,
                     backdropFilter: "blur(24px)",
                     WebkitBackdropFilter: "blur(24px)",
+                    transform: "translateZ(0)",
                 }}>
                     <DashboardMockup c={c} />
-
-                    {/* Layer the floating badges onto the Dashboard directly! */}
-                    {/* Search Badge (top left-ish) */}
-                    <div style={{
-                        position: "absolute", top: 110, left: 160,
-                        backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
-                        padding: "12px 16px",
-                        borderRadius: 12,
-                        display: "flex", alignItems: "center", gap: 10,
-                        boxShadow: "0 12px 30px -5px rgba(139,92,246,0.3)",
-                        border: `1px solid ${isDark ? "rgba(139,92,246,0.2)" : "rgba(139,92,246,0.1)"}`,
-                        zIndex: 10,
-                        transform: "translateY(0px)",
-                        animation: "float 6s ease-in-out infinite"
-                    }}>
-                        <span style={{ color: "#E879F9" }}><Icons.Search /></span>
-                        <span style={{ fontSize: 12.5, fontWeight: 700, color: "#C026D3" }}>Searching your latest<br />messages</span>
-                    </div>
-
-                    {/* Writing Badge (middle right-ish) */}
-                    <div style={{
-                        position: "absolute", top: 240, left: 320,
-                        backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
-                        padding: "12px 16px",
-                        borderRadius: 12,
-                        display: "flex", alignItems: "center", gap: 8,
-                        boxShadow: "0 12px 30px -5px rgba(236,72,153,0.3)",
-                        border: `1px solid ${isDark ? "rgba(236,72,153,0.2)" : "rgba(236,72,153,0.1)"}`,
-                        zIndex: 10,
-                        animation: "float 6s ease-in-out infinite 2s" // 2s delay so they bob out of sync
-                    }}>
-                        <span style={{ color: "#EC4899" }}><Icons.Pencil /></span>
-                        <span style={{ fontSize: 12.5, fontWeight: 700, color: "#EC4899" }}>Writing 1:1 meeting prep</span>
-                    </div>
                 </div>
-
-                {/* Inline keyframes for the floating animations */}
-                <style dangerouslySetInnerHTML={{
-                    __html: `
-                    @keyframes float {
-                        0%   { transform: translateY(0px); }
-                        50%  { transform: translateY(-8px); }
-                        100% { transform: translateY(0px); }
-                    }
-                `}} />
             </div>
 
         </div>

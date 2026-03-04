@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useLayoutEffect, useState } from "react";
 
-const ThemeCtx = createContext({ theme: "light", toggle: () => { } });
+export const ThemeCtx = createContext({ theme: "light", toggle: () => { } });
 
 export function ThemeProvider({ children }) {
     // Initialise from the data-theme the blocking <script> already applied
@@ -30,4 +30,3 @@ export function ThemeProvider({ children }) {
     );
 }
 
-export const useTheme = () => useContext(ThemeCtx);

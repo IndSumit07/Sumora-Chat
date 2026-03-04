@@ -1,5 +1,7 @@
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
-import { ThemeProvider } from "@/components/ThemeProvider";
+import { ThemeProvider } from "@/providers/ThemeProvider";
+import { AuthProvider } from "@/providers/AuthProvider";
+import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 const inter = Inter({
@@ -44,7 +46,39 @@ export default function RootLayout({ children }) {
       <body
         className={`${inter.variable} ${plusJakartaSans.variable} antialiased`}
       >
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            {children}
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: "var(--bg-surface)",
+                  color: "var(--fg-primary)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "16px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                  padding: "12px 20px",
+                  boxShadow: "var(--shadow-lg)",
+                },
+                success: {
+                  iconTheme: {
+                    primary: "#10b981",
+                    secondary: "#fff",
+                  },
+                },
+                error: {
+                  iconTheme: {
+                    primary: "#ef4444",
+                    secondary: "#fff",
+                  },
+                },
+              }}
+            />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

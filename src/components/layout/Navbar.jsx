@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import ThemeToggle from "./ThemeToggle";
-import { useTheme } from "./ThemeProvider";
+import ThemeToggle from "@/components/layout/ThemeToggle";
+import { useTheme } from "@/hooks/use-theme";
+import { useAuth } from "@/hooks/use-auth";
+import UserButton from "@/components/layout/UserButton";
 
 /* ─────────────── nav links ─────────────── */
 const NAV_LINKS = [
@@ -130,7 +132,7 @@ function SumoraLogo() {
     return (
         <Link href="/" className="flex items-center gap-2.5 select-none group">
             <span
-                className="flex items-center justify-center w-8 h-8 rounded-[10px] flex-shrink-0 transition-transform duration-200 group-hover:scale-105"
+                className="flex items-center justify-center w-8 h-8 rounded-[10px] shrink-0 transition-transform duration-200 group-hover:scale-105"
                 style={{ backgroundColor: "var(--fg-primary)" }}
                 aria-hidden="true"
             >
@@ -194,6 +196,7 @@ function HamburgerIcon({ open }) {
 export default function Navbar() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const { user, loading } = useAuth();
     const navPillRef = useRef(null);
 
     useEffect(() => {
@@ -271,30 +274,40 @@ export default function Navbar() {
                         {/* Theme toggle */}
                         <ThemeToggle />
 
-                        <Link
-                            href="/sign-in"
-                            id="nav-login"
-                            className="text-sm font-medium transition-colors duration-200"
-                            style={{ color: "var(--fg-secondary)" }}
-                            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--fg-primary)")}
-                            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--fg-secondary)")}
-                        >
-                            Log In
-                        </Link>
+                        {!loading && (
+                            <>
+                                {user ? (
+                                    <UserButton />
+                                ) : (
+                                    <>
+                                        <Link
+                                            href="/sign-in"
+                                            id="nav-login"
+                                            className="text-sm font-medium transition-colors duration-200"
+                                            style={{ color: "var(--fg-secondary)" }}
+                                            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--fg-primary)")}
+                                            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--fg-secondary)")}
+                                        >
+                                            Log In
+                                        </Link>
 
-                        <Link
-                            href="/sign-up"
-                            id="nav-get-started"
-                            className="text-sm font-semibold px-5 py-2.5 rounded-full transition-all duration-200 active:scale-95"
-                            style={{
-                                backgroundColor: "var(--fg-primary)",
-                                color: "var(--bg-primary)",
-                            }}
-                            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
-                            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-                        >
-                            Get Started
-                        </Link>
+                                        <Link
+                                            href="/sign-up"
+                                            id="nav-get-started"
+                                            className="text-sm font-semibold px-5 py-2.5 rounded-full transition-all duration-200 active:scale-95"
+                                            style={{
+                                                backgroundColor: "var(--fg-primary)",
+                                                color: "var(--bg-primary)",
+                                            }}
+                                            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
+                                            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                                        >
+                                            Get Started
+                                        </Link>
+                                    </>
+                                )}
+                            </>
+                        )}
                     </div>
 
                     {/* Hamburger — mobile */}
@@ -318,8 +331,8 @@ export default function Navbar() {
                 aria-modal="false"
                 aria-label="Mobile navigation"
                 className={`fixed top-[68px] left-0 right-0 z-40 md:hidden transition-all duration-300 ease-out ${menuOpen
-                        ? "opacity-100 translate-y-0 pointer-events-auto"
-                        : "opacity-0 -translate-y-3 pointer-events-none"
+                    ? "opacity-100 translate-y-0 pointer-events-auto"
+                    : "opacity-0 -translate-y-3 pointer-events-none"
                     }`}
                 style={{
                     backgroundColor: "var(--bg-primary)",
@@ -364,25 +377,37 @@ export default function Navbar() {
                         <ThemeToggle />
                     </div>
 
-                    <Link
-                        href="/sign-in"
-                        className="flex items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors duration-150"
-                        style={{ color: "var(--fg-secondary)" }}
-                        onClick={() => setMenuOpen(false)}
-                    >
-                        Log In
-                    </Link>
-                    <Link
-                        href="/sign-up"
-                        className="flex items-center justify-center px-4 py-3.5 text-sm font-semibold rounded-xl transition-all duration-150 active:scale-[0.98]"
-                        style={{
-                            backgroundColor: "var(--fg-primary)",
-                            color: "var(--bg-primary)",
-                        }}
-                        onClick={() => setMenuOpen(false)}
-                    >
-                        Get Started
-                    </Link>
+                    {!loading && (
+                        <>
+                            {user ? (
+                                <div className="px-4 py-3">
+                                    <UserButton />
+                                </div>
+                            ) : (
+                                <>
+                                    <Link
+                                        href="/sign-in"
+                                        className="flex items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors duration-150"
+                                        style={{ color: "var(--fg-secondary)" }}
+                                        onClick={() => setMenuOpen(false)}
+                                    >
+                                        Log In
+                                    </Link>
+                                    <Link
+                                        href="/sign-up"
+                                        className="flex items-center justify-center px-4 py-3.5 text-sm font-semibold rounded-xl transition-all duration-150 active:scale-[0.98]"
+                                        style={{
+                                            backgroundColor: "var(--fg-primary)",
+                                            color: "var(--bg-primary)",
+                                        }}
+                                        onClick={() => setMenuOpen(false)}
+                                    >
+                                        Get Started
+                                    </Link>
+                                </>
+                            )}
+                        </>
+                    )}
                 </div>
             </div>
 

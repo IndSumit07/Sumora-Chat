@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useTheme } from "./ThemeProvider";
+import { useTheme } from "@/hooks/use-theme";
 
 /* ── inline SVG icons ─────────────────────────── */
 function SunIcon() {

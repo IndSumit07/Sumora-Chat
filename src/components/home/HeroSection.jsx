@@ -1,7 +1,8 @@
 "use client";
 
-import { useTheme } from "./ThemeProvider";
-import FeatureShowcase from "./FeatureShowcase";
+import { useTheme } from "@/hooks/use-theme";
+import FeatureShowcase from "@/components/home/FeatureShowcase";
+import Testimonials from "@/components/home/Testimonials";
 
 /* ══════════════════════════════════════════════════
    THEME COLOR MAP  — passed as `c` to every child
@@ -561,10 +562,10 @@ function IntegrationChip({ name, bg, icon }) {
 }
 
 function MarqueeStrip() {
-    /* Create an array of exactly 40 items (5 integrations × 8 repeats).
-       Since 50% of 40 is 20, the -50% CSS animation shift perfectly lines up
-       with exactly 4 repeating sets of the 5 apps. Seamless pixel-perfect loop. */
-    const track = Array.from({ length: 8 }, () => INTEGRATIONS).flat();
+    /* Reduced array length to optimize DOM nodes.
+       Since 50% of 20 is 10, the -50% CSS animation shift perfectly lines up
+       with exactly 2 repeating sets of the 5 apps. Seamless pixel-perfect loop. */
+    const track = Array.from({ length: 4 }, () => INTEGRATIONS).flat();
 
     return (
         <div
@@ -597,6 +598,7 @@ function MarqueeStrip() {
                 width: "max-content",
                 animation: "marquee-scroll 32s linear infinite",
                 willChange: "transform",
+                transform: "translateZ(0)",
             }}>
                 {track.map((item, i) => (
                     <IntegrationChip key={i} {...item} />
@@ -621,6 +623,7 @@ export default function HeroSection() {
             <div aria-hidden="true" style={{
                 position: "absolute", inset: 0, pointerEvents: "none",
                 opacity: isDark ? 0 : 1, transition: "opacity 0.5s ease",
+                willChange: "opacity", transform: "translateZ(0)",
                 background: `
           radial-gradient(ellipse 110% 60% at 50% -10%,
             rgba(255,186,130,0.80) 0%, rgba(255,207,160,0.52) 30%,
@@ -635,6 +638,7 @@ export default function HeroSection() {
             <div aria-hidden="true" style={{
                 position: "absolute", inset: 0, pointerEvents: "none",
                 opacity: isDark ? 1 : 0, transition: "opacity 0.5s ease",
+                willChange: "opacity", transform: "translateZ(0)",
                 background: `
           radial-gradient(ellipse 110% 60% at 50% -10%,
             rgba(110,45,14,0.85) 0%, rgba(65,28,9,0.55) 30%,
@@ -649,6 +653,7 @@ export default function HeroSection() {
             <div aria-hidden="true" style={{
                 position: "absolute", inset: 0, pointerEvents: "none",
                 opacity: isDark ? 0.05 : 0.035, transition: "opacity 0.5s ease",
+                willChange: "opacity", transform: "translateZ(0)",
                 backgroundImage: "radial-gradient(circle, var(--fg-primary) 1px, transparent 1px)",
                 backgroundSize: "30px 30px",
                 WebkitMaskImage: "radial-gradient(ellipse 80% 70% at 50% 0%, black 0%, transparent 70%)",
@@ -710,6 +715,7 @@ export default function HeroSection() {
                     WebkitBackdropFilter: "blur(24px)",
                     WebkitMaskImage: "linear-gradient(to bottom, black 65%, transparent 100%)",
                     maskImage: "linear-gradient(to bottom, black 65%, transparent 100%)",
+                    transform: "translateZ(0)",
                 }}>
                     <DashboardMockup c={c} />
                 </div>
@@ -733,6 +739,9 @@ export default function HeroSection() {
 
             {/* ── Feature Showcase ── */}
             <FeatureShowcase />
+
+            {/* ── Testimonials ── */}
+            <Testimonials />
 
         </section>
     );
