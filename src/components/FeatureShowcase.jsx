@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTheme } from "./ThemeProvider";
+import { DashboardMockup, LIGHT, DARK } from "./HeroSection";
 
 const FEATURES = [
     {
@@ -64,18 +65,8 @@ export default function FeatureShowcase() {
     const activeColor = "#8B5CF6"; // Vibrant purple for active state
     const inactiveColor = "var(--fg-secondary)";
 
-    // Mockup UI colors based on theme
-    const mockTheme = {
-        bgTop: isDark ? "#1E1B2E" : "#4A154B", // Purple top bar mimicking slack/saas
-        bgSidebar: isDark ? "#121019" : "#350D36",
-        bgMain: isDark ? "#1A1A1A" : "#F8F8F8",
-        bgPanel: isDark ? "#242424" : "#FFFFFF",
-        textPrimary: isDark ? "#E5E5E5" : "#1D1C1D",
-        textSec: isDark ? "#9CA3AF" : "#616061",
-        border: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)",
-        bubbleBg: isDark ? "#383838" : "#F2F2F2",
-        cardBg: isDark ? "#2A2A2A" : "#FFFFFF",
-    };
+    // Pass color map to imported mockup layout
+    const c = isDark ? DARK : LIGHT;
 
     return (
         <div style={{
@@ -189,7 +180,7 @@ export default function FeatureShowcase() {
             </div>
 
             {/* ── RIGHT: Graphic Mockup ── */}
-            <div style={{ flex: "1.5 1 500px", position: "relative" }}>
+            <div style={{ flex: "1.5 1 500px", position: "relative", height: 520 }}>
 
                 {/* Decorative background glow behind the mockup */}
                 <div aria-hidden="true" style={{
@@ -199,183 +190,54 @@ export default function FeatureShowcase() {
                     filter: "blur(60px)", pointerEvents: "none", zIndex: 0
                 }} />
 
-                {/* Main Glass/Shadow Wrapper for Graphic */}
+                {/* Glass Border Wrapper bleeding out to the right */}
                 <div style={{
-                    position: "relative",
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    width: 1100, // Forces the component to bleed outside the grid container limits
                     zIndex: 2,
-                    borderRadius: 12,
-                    border: `1px solid ${isDark ? "rgb(255,255,255,0.08)" : "rgb(0,0,0,0.05)"}`,
-                    overflow: "hidden",
-                    display: "flex", flexDirection: "column",
-                    height: 480,
-                    backgroundColor: mockTheme.bgMain,
-                    boxShadow: isDark
-                        ? "0 30px 60px -10px rgba(0,0,0,0.5)"
-                        : "0 30px 60px -10px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)",
-                    fontFamily: "'Inter', system-ui, sans-serif"
+                    padding: 10,
+                    borderRadius: 26,
+                    background: "transparent",
+                    border: `1px solid ${isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)"}`,
+                    backdropFilter: "blur(24px)",
+                    WebkitBackdropFilter: "blur(24px)",
                 }}>
+                    <DashboardMockup c={c} />
 
-                    {/* Top Bar (Purple) */}
+                    {/* Layer the floating badges onto the Dashboard directly! */}
+                    {/* Search Badge (top left-ish) */}
                     <div style={{
-                        height: 40, backgroundColor: mockTheme.bgTop,
-                        display: "flex", alignItems: "center", padding: "0 16px",
-                        gap: 8, flexShrink: 0,
+                        position: "absolute", top: 110, left: 160,
+                        backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
+                        padding: "12px 16px",
+                        borderRadius: 12,
+                        display: "flex", alignItems: "center", gap: 10,
+                        boxShadow: "0 12px 30px -5px rgba(139,92,246,0.3)",
+                        border: `1px solid ${isDark ? "rgba(139,92,246,0.2)" : "rgba(139,92,246,0.1)"}`,
+                        zIndex: 10,
+                        transform: "translateY(0px)",
+                        animation: "float 6s ease-in-out infinite"
                     }}>
-                        <div style={{ width: 12, height: 12, borderRadius: "50%", backgroundColor: "#FF5F56" }} />
-                        <div style={{ width: 12, height: 12, borderRadius: "50%", backgroundColor: "#FFBD2E" }} />
-                        <div style={{ width: 12, height: 12, borderRadius: "50%", backgroundColor: "#27C93F" }} />
-
-                        {/* Search bar inside header */}
-                        <div style={{
-                            margin: "0 auto", width: 300, height: 24,
-                            backgroundColor: "rgba(255,255,255,0.15)",
-                            borderRadius: 6, display: "flex", alignItems: "center",
-                            padding: "0 10px", color: "rgba(255,255,255,0.5)"
-                        }}>
-                            <Icons.Search />
-                        </div>
+                        <span style={{ color: "#E879F9" }}><Icons.Search /></span>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: "#C026D3" }}>Searching your latest<br />messages</span>
                     </div>
 
-                    <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-                        {/* Sidebar (Dark Purple) */}
-                        <div style={{
-                            width: 65, backgroundColor: mockTheme.bgSidebar,
-                            display: "flex", flexDirection: "column", alignItems: "center",
-                            paddingTop: 16, gap: 16
-                        }}>
-                            <div style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>S</div>
-                            {/* Dummy lines matching icons */}
-                            <div style={{ width: 24, height: 2, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 2 }} />
-                            <div style={{ width: 24, height: 2, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 2 }} />
-                            <div style={{ width: 24, height: 2, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 2 }} />
-                        </div>
-
-                        {/* Middle Pane (Faded Chat view) */}
-                        <div style={{
-                            flex: 1, position: "relative",
-                            borderRight: `1px solid ${mockTheme.border}`
-                        }}>
-                            {/* Skeleton chat content */}
-                            <div style={{ padding: 20, opacity: 0.3, filter: "blur(1px)" }}>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: mockTheme.textPrimary, marginBottom: 16 }}># account-harmony-labs</div>
-                                {[1, 2, 3].map(i => (
-                                    <div key={i} style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-                                        <div style={{ width: 36, height: 36, borderRadius: 6, backgroundColor: mockTheme.border }} />
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ width: 100, height: 10, borderRadius: 4, backgroundColor: mockTheme.border, marginBottom: 8 }} />
-                                            <div style={{ width: "80%", height: 8, borderRadius: 4, backgroundColor: mockTheme.border, marginBottom: 6 }} />
-                                            <div style={{ width: "60%", height: 8, borderRadius: 4, backgroundColor: mockTheme.border }} />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* ── Floating Glowing Badges ── */}
-
-                            {/* Search Badge (top left-ish) */}
-                            <div style={{
-                                position: "absolute", top: 60, left: 10,
-                                backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
-                                padding: "12px 16px",
-                                borderRadius: 12,
-                                display: "flex", alignItems: "center", gap: 10,
-                                boxShadow: "0 12px 30px -5px rgba(139,92,246,0.3)",
-                                border: `1px solid ${isDark ? "rgba(139,92,246,0.2)" : "rgba(139,92,246,0.1)"}`,
-                                zIndex: 10,
-                                transform: "translateY(0px)",
-                                animation: "float 6s ease-in-out infinite"
-                            }}>
-                                <span style={{ color: "#E879F9" }}><Icons.Search /></span>
-                                <span style={{ fontSize: 12.5, fontWeight: 700, color: "#C026D3" }}>Searching your latest<br />messages</span>
-                            </div>
-
-                            {/* Writing Badge (middle right-ish) */}
-                            <div style={{
-                                position: "absolute", top: 160, right: -20,
-                                backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
-                                padding: "12px 16px",
-                                borderRadius: 12,
-                                display: "flex", alignItems: "center", gap: 8,
-                                boxShadow: "0 12px 30px -5px rgba(236,72,153,0.3)",
-                                border: `1px solid ${isDark ? "rgba(236,72,153,0.2)" : "rgba(236,72,153,0.1)"}`,
-                                zIndex: 10,
-                                animation: "float 6s ease-in-out infinite 2s" // 2s delay so they bob out of sync
-                            }}>
-                                <span style={{ color: "#EC4899" }}><Icons.Pencil /></span>
-                                <span style={{ fontSize: 12.5, fontWeight: 700, color: "#D1D5DB", color: "#EC4899" }}>Writing 1:1 meeting prep</span>
-                            </div>
-
-                        </div>
-
-                        {/* Right Pane (Sumora AI Panel) */}
-                        <div style={{
-                            width: 280, backgroundColor: mockTheme.bgPanel,
-                            display: "flex", flexDirection: "column",
-                            zIndex: 11 // Needs to sit above the floats
-                        }}>
-                            {/* Panel Header */}
-                            <div style={{
-                                padding: "16px", borderBottom: `1px solid ${mockTheme.border}`,
-                                display: "flex", alignItems: "center", gap: 8
-                            }}>
-                                <div style={{ color: "#8B5CF6" }}><Icons.Sparkle /></div>
-                                <span style={{ fontSize: 14, fontWeight: 700, color: mockTheme.textPrimary }}>Sumora AI</span>
-                            </div>
-
-                            {/* Panel Body */}
-                            <div style={{ flex: 1, padding: 16, overflowY: "hidden", display: "flex", flexDirection: "column", gap: 20 }}>
-
-                                {/* User Message */}
-                                <div style={{ display: "flex", gap: 8 }}>
-                                    <div style={{ width: 24, height: 24, borderRadius: "50%", backgroundColor: "#3B82F6", flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 10, fontWeight: 700 }}>FH</div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: mockTheme.textPrimary, marginBottom: 4 }}>Faisal Hasan</div>
-                                        <div style={{ fontSize: 12, color: mockTheme.textSec, lineHeight: 1.5 }}>
-                                            Help me prep for my 1:1 with my manager. Summarise recent conversations and wins.
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* AI Message */}
-                                <div style={{ display: "flex", gap: 8 }}>
-                                    <div style={{ width: 24, height: 24, borderRadius: 4, backgroundColor: "#8B5CF6", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: '#fff', fontSize: 12 }}><Icons.Sparkle /></div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: 13, fontWeight: 700, color: mockTheme.textPrimary, marginBottom: 4 }}>Sumora AI</div>
-                                        <div style={{ fontSize: 12, color: mockTheme.textSec, lineHeight: 1.5, marginBottom: 12 }}>
-                                            Your canvas is ready! I've created a comprehensive 1:1 meeting prep based on your recent project activity.
-                                        </div>
-
-                                        {/* Canvas Card */}
-                                        <div style={{
-                                            padding: 12, borderRadius: 8,
-                                            border: `1px solid ${mockTheme.border}`,
-                                            backgroundColor: mockTheme.cardBg,
-                                            display: "flex", alignItems: "center", gap: 10
-                                        }}>
-                                            <div style={{ width: 32, height: 32, borderRadius: 6, backgroundColor: "#2D8CFF", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                                <Icons.Doc />
-                                            </div>
-                                            <div>
-                                                <div style={{ fontSize: 11.5, fontWeight: 600, color: mockTheme.textPrimary }}>1:1 meeting prep</div>
-                                                <div style={{ fontSize: 10, color: mockTheme.textSec }}>Can edit</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Panel Input */}
-                            <div style={{ padding: 16, borderTop: `1px solid ${mockTheme.border}` }}>
-                                <div style={{
-                                    border: `1px solid ${mockTheme.border}`, borderRadius: 8,
-                                    padding: "8px 12px", display: "flex", justifyContent: "space-between"
-                                }}>
-                                    <span style={{ fontSize: 12, color: mockTheme.textSec }}>Message Sumora AI...</span>
-                                    <Icons.ArrowRight />
-                                </div>
-                            </div>
-
-                        </div>
+                    {/* Writing Badge (middle right-ish) */}
+                    <div style={{
+                        position: "absolute", top: 240, left: 320,
+                        backgroundColor: isDark ? "#2A2A2A" : "#FFFFFF",
+                        padding: "12px 16px",
+                        borderRadius: 12,
+                        display: "flex", alignItems: "center", gap: 8,
+                        boxShadow: "0 12px 30px -5px rgba(236,72,153,0.3)",
+                        border: `1px solid ${isDark ? "rgba(236,72,153,0.2)" : "rgba(236,72,153,0.1)"}`,
+                        zIndex: 10,
+                        animation: "float 6s ease-in-out infinite 2s" // 2s delay so they bob out of sync
+                    }}>
+                        <span style={{ color: "#EC4899" }}><Icons.Pencil /></span>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: "#EC4899" }}>Writing 1:1 meeting prep</span>
                     </div>
                 </div>
 

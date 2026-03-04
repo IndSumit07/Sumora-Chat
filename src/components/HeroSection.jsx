@@ -6,7 +6,7 @@ import FeatureShowcase from "./FeatureShowcase";
 /* ══════════════════════════════════════════════════
    THEME COLOR MAP  — passed as `c` to every child
 ══════════════════════════════════════════════════ */
-const LIGHT = {
+export const LIGHT = {
     cardBg: "#ffffff",
     headerBg: "#ffffff",
     sidebarBg: "#F7F6F3",
@@ -33,7 +33,7 @@ const LIGHT = {
     shadow: "none",
 };
 
-const DARK = {
+export const DARK = {
     cardBg: "#1C1C1A",
     headerBg: "#1C1C1A",
     sidebarBg: "#161614",
@@ -300,7 +300,7 @@ function IconBtn({ children, c }) {
 /* ══════════════════════════════════════════════════
    FULL DASHBOARD MOCKUP
 ══════════════════════════════════════════════════ */
-function DashboardMockup({ c }) {
+export function DashboardMockup({ c }) {
     return (
         <div style={{
             width: "100%", borderRadius: 18,
