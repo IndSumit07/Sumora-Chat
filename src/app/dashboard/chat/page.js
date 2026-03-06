@@ -4,22 +4,33 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useCallback } from "react";
 import ButtonSpinner from "@/components/ui/ButtonSpinner";
+import { useCrypto } from "@/providers/CryptoProvider";
+import { usePresence } from "@/hooks/usePresence";
 
-// New Unique Dashboard Components
+// Dashboard components
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import SecondarySidebar from "@/components/dashboard/SecondarySidebar";
 import ConversationList from "@/components/dashboard/ConversationList";
 import ChatWindow from "@/components/dashboard/ChatWindow";
 
 export default function ChatDashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("dm"); // 'dm', 'group', 'server'
+  const { userId } = useCrypto();
 
-  // Resizing logic
+  // Activate global presence tracking — writes is_online to profiles
+  usePresence(userId);
+
+  const [activeTab, setActiveTab] = useState("dm"); // 'dm' | 'friends'
+
+  // Selected conversation — { id, otherProfile }
+  const [selectedConv, setSelectedConv] = useState(null);
+
+  // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(380);
   const isResizing = useRef(false);
 
-  const startResizing = useCallback((e) => {
+  const startResizing = useCallback(() => {
     isResizing.current = true;
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", stopResizing);
@@ -37,8 +48,6 @@ export default function ChatDashboard() {
 
   const handleMouseMove = useCallback((e) => {
     if (!isResizing.current) return;
-
-    // Sidebar icons are 84px wide
     const newWidth = e.clientX - 84;
     if (newWidth >= 280 && newWidth <= 500) {
       setSidebarWidth(newWidth);
@@ -68,20 +77,33 @@ export default function ChatDashboard() {
 
   return (
     <main className="flex h-screen bg-background overflow-hidden text-foreground antialiased font-sans">
-      {/* Minimal Nav Sidebar */}
+      {/* Icon Sidebar */}
       <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Inbox / Conversation Explorer */}
-      <ConversationList activeTab={activeTab} width={sidebarWidth} />
+      {/* Inbox details Sidebar */}
+      <SecondarySidebar onSelectConversation={setSelectedConv} />
+
+      {/* Conversation List */}
+      <ConversationList
+        activeTab={activeTab}
+        width={sidebarWidth}
+        selectedConvId={selectedConv?.id ?? null}
+        onSelectConversation={setSelectedConv}
+      />
 
       {/* Resize Handle */}
       <div
         onMouseDown={startResizing}
-        className="w-1.5 h-full cursor-col-resize hover:bg-foreground/10 active:bg-foreground/20 transition-colors z-50 shrink-0 -ml-0.75"
+        className="w-1.5 h-full cursor-col-resize hover:bg-foreground/10 active:bg-foreground/20 transition-colors z-50 shrink-0"
       />
 
-      {/* Main Premium Chat Canvas */}
-      <ChatWindow activeTab={activeTab} />
+      {/* Main Chat Window */}
+      <ChatWindow
+        conversationId={selectedConv?.id ?? null}
+        otherProfile={selectedConv?.otherProfile ?? null}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
     </main>
   );
 }

@@ -1,6 +1,7 @@
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { CryptoProvider } from "@/providers/CryptoProvider";
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
@@ -48,35 +49,37 @@ export default function RootLayout({ children }) {
       >
         <ThemeProvider>
           <AuthProvider>
-            {children}
-            <Toaster
-              position="bottom-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: "var(--bg-surface)",
-                  color: "var(--fg-primary)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "16px",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  padding: "12px 20px",
-                  boxShadow: "var(--shadow-lg)",
-                },
-                success: {
-                  iconTheme: {
-                    primary: "#10b981",
-                    secondary: "#fff",
+            <CryptoProvider>
+              {children}
+              <Toaster
+                position="bottom-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: "var(--bg-surface)",
+                    color: "var(--fg-primary)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "16px",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    padding: "12px 20px",
+                    boxShadow: "var(--shadow-lg)",
                   },
-                },
-                error: {
-                  iconTheme: {
-                    primary: "#ef4444",
-                    secondary: "#fff",
+                  success: {
+                    iconTheme: {
+                      primary: "#10b981",
+                      secondary: "#fff",
+                    },
                   },
-                },
-              }}
-            />
+                  error: {
+                    iconTheme: {
+                      primary: "#ef4444",
+                      secondary: "#fff",
+                    },
+                  },
+                }}
+              />
+            </CryptoProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
