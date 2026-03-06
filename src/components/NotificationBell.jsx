@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { Bell, Check, CheckCheck, UserPlus, X } from "lucide-react";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useCrypto } from "@/providers/CryptoProvider";
-import { acceptFriendRequest, rejectFriendRequest } from "@/lib/friends";
 
 // ─── Timestamp Formatter ─────────────────────────────────────────────────────
 
@@ -27,25 +26,6 @@ function formatTime(isoString) {
 
 function NotificationItem({ notif, onMarkRead, onAction }) {
     const isFriendRequest = notif.type === "friend_request";
-    const [acting, setActing] = useState(null);
-
-    const handleFriendAction = async (action) => {
-        if (!notif.data?.friendship_id) return;
-        setActing(action);
-        try {
-            if (action === "accept") {
-                await acceptFriendRequest(notif.data.friendship_id);
-            } else {
-                await rejectFriendRequest(notif.data.friendship_id);
-            }
-            onMarkRead(notif.id);
-            if (onAction) onAction(notif.id, action);
-        } catch (err) {
-            console.error("Notification friend action failed:", err.message);
-        } finally {
-            setActing(null);
-        }
-    };
 
     return (
         <div
@@ -73,25 +53,6 @@ function NotificationItem({ notif, onMarkRead, onAction }) {
                     {formatTime(notif.created_at)}
                 </p>
 
-                {/* Inline Accept/Reject for friend request notifications */}
-                {isFriendRequest && !notif.is_read && (
-                    <div className="flex items-center gap-2 mt-2">
-                        <button
-                            onClick={(e) => { e.stopPropagation(); handleFriendAction("reject"); }}
-                            disabled={!!acting}
-                            className="px-3 py-1.5 text-[11px] font-bold text-[#888888] bg-gray-100 rounded-lg hover:bg-gray-200 transition-all disabled:opacity-40"
-                        >
-                            {acting === "reject" ? "…" : "Decline"}
-                        </button>
-                        <button
-                            onClick={(e) => { e.stopPropagation(); handleFriendAction("accept"); }}
-                            disabled={!!acting}
-                            className="px-3 py-1.5 text-[11px] font-bold text-white bg-[#22C55E] rounded-lg hover:bg-[#16A34A] transition-all disabled:opacity-40"
-                        >
-                            {acting === "accept" ? "…" : "Accept"}
-                        </button>
-                    </div>
-                )}
             </div>
 
             {/* Unread dot */}

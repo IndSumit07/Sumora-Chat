@@ -1,11 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
 
-/**
- * Searches for a user by exact email address via a Supabase RPC.
- * The RPC should be: search_user_by_email(email text) → profiles row
- * @param {string} email
- * @returns {Promise<Object|null>}
- */
 export async function searchUserByEmail(email) {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("search_user_by_email", {
@@ -15,58 +9,26 @@ export async function searchUserByEmail(email) {
   return data?.[0] ?? null;
 }
 
-/**
- * Sends a friend request from the current user to addresseeId.
- * @param {string} addresseeId  UUID of the target user
- */
-export async function sendFriendRequest(addresseeId) {
+export async function addContact(contactUserId, contactName) {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const { error } = await supabase.from("friendships").insert({
-    requester_id: user.id,
-    addressee_id: addresseeId,
-    status: "pending",
-  });
+  // Upsert contact so if it already exists it just updates the name
+  const { error } = await supabase.from("contacts").upsert(
+    {
+      user_id: user.id,
+      contact_user_id: contactUserId,
+      contact_name: contactName,
+    },
+    { onConflict: "user_id,contact_user_id" },
+  );
 
   if (error) throw error;
 }
 
-/**
- * Accepts a pending friend request.
- * @param {string} friendshipId  UUID of the friendship row
- */
-export async function acceptFriendRequest(friendshipId) {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from("friendships")
-    .update({ status: "accepted" })
-    .eq("id", friendshipId);
-
-  if (error) throw error;
-}
-
-/**
- * Rejects a pending friend request.
- * @param {string} friendshipId  UUID of the friendship row
- */
-export async function rejectFriendRequest(friendshipId) {
-  const supabase = createClient();
-  const { error } = await supabase
-    .from("friendships")
-    .update({ status: "rejected" })
-    .eq("id", friendshipId);
-
-  if (error) throw error;
-}
-
-/**
- * Returns all accepted friends of the current user, with their profile details.
- * @returns {Promise<Array>}
- */
 export async function getFriends() {
   const supabase = createClient();
   const {
@@ -74,28 +36,23 @@ export async function getFriends() {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  // Fetch friendships where I am requester OR addressee and status = accepted
-  const { data: friendships, error } = await supabase
-    .from("friendships")
+  const { data: contacts, error } = await supabase
+    .from("contacts")
     .select(
       `
       id,
-      requester_id,
-      addressee_id,
-      status,
+      user_id,
+      contact_user_id,
+      contact_name,
       created_at
     `,
     )
-    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
-    .eq("status", "accepted");
+    .eq("user_id", user.id);
 
   if (error) throw error;
-  if (!friendships || friendships.length === 0) return [];
+  if (!contacts || contacts.length === 0) return [];
 
-  // Collect friend UUIDs (the other person in each friendship)
-  const friendIds = friendships.map((f) =>
-    f.requester_id === user.id ? f.addressee_id : f.requester_id,
-  );
+  const friendIds = contacts.map((c) => c.contact_user_id);
 
   const { data: profiles, error: profileError } = await supabase
     .from("profiles")
@@ -104,11 +61,12 @@ export async function getFriends() {
 
   if (profileError) throw profileError;
 
-  // Merge friendship metadata with profile data
-  return friendships.map((f) => {
-    const friendId =
-      f.requester_id === user.id ? f.addressee_id : f.requester_id;
-    const profile = profiles.find((p) => p.id === friendId);
-    return { ...f, friend: profile };
+  return contacts.map((c) => {
+    const profile = profiles.find((p) => p.id === c.contact_user_id) || {};
+    return {
+      id: c.id,
+      friend: { ...profile, full_name: c.contact_name || profile.full_name },
+      contact_name: c.contact_name,
+    };
   });
 }

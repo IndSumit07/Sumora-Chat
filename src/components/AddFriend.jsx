@@ -2,9 +2,7 @@
 
 import React, { useState } from "react";
 import { Search, UserPlus, Check, X, Loader2 } from "lucide-react";
-import { searchUserByEmail, sendFriendRequest } from "@/lib/friends";
-
-// ─── Toast (inline, no external dependency) ──────────────────────────────────
+import { searchUserByEmail, addContact } from "@/lib/friends";
 
 function Toast({ message, type, onDismiss }) {
     return (
@@ -21,36 +19,49 @@ function Toast({ message, type, onDismiss }) {
     );
 }
 
-// ─── User Preview Card ────────────────────────────────────────────────────────
-
 function UserPreviewCard({ user, onConfirm, onCancel, sending }) {
+    const [nameVal, setNameVal] = useState(user.full_name || "");
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onConfirm(nameVal.trim() || user.full_name || "Unknown");
+    };
+
     return (
-        <div className="mt-4 p-4 bg-[#F8F9FA] rounded-2xl border border-[#EEEEEE] flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-200 shrink-0 bg-gray-100">
-                {user.avatar_url ? (
-                    <img
-                        src={user.avatar_url}
-                        alt={user.full_name}
-                        className="w-full h-full object-cover"
+        <form onSubmit={handleSubmit} className="mt-4 p-4 bg-[#F8F9FA] rounded-2xl border border-[#EEEEEE] flex flex-col gap-3">
+            <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-200 shrink-0 bg-gray-100">
+                    {user.avatar_url ? (
+                        <img
+                            src={user.avatar_url}
+                            alt={user.full_name}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-[18px] font-black text-gray-400">
+                            {user.full_name?.[0]?.toUpperCase() ?? "?"}
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    <p className="text-[12px] text-[#888888] font-bold truncate">
+                        {user.email ?? ""}
+                    </p>
+                    <input
+                        type="text"
+                        value={nameVal}
+                        onChange={(e) => setNameVal(e.target.value)}
+                        placeholder="Save as (Custom Name)"
+                        className="w-full bg-transparent border-b border-[#CCCCCC] focus:border-black outline-none py-1 text-[15px] font-black text-black placeholder:text-[#BBBBBB] transition-colors"
+                        autoFocus
                     />
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[18px] font-black text-gray-400">
-                        {user.full_name?.[0]?.toUpperCase() ?? "?"}
-                    </div>
-                )}
+                </div>
             </div>
 
-            <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-black text-black truncate">
-                    {user.full_name ?? "Unnamed User"}
-                </p>
-                <p className="text-[12px] text-[#888888] font-semibold truncate">
-                    {user.email ?? ""}
-                </p>
-            </div>
-
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 justify-end mt-2">
                 <button
+                    type="button"
                     onClick={onCancel}
                     disabled={sending}
                     className="p-2.5 rounded-xl text-[#888888] hover:text-black hover:bg-gray-200 transition-all"
@@ -58,8 +69,8 @@ function UserPreviewCard({ user, onConfirm, onCancel, sending }) {
                     <X size={16} />
                 </button>
                 <button
-                    onClick={onConfirm}
-                    disabled={sending}
+                    type="submit"
+                    disabled={sending || !nameVal.trim()}
                     className="flex items-center gap-2 px-4 py-2 bg-black text-white text-[13px] font-bold rounded-xl hover:bg-[#222] active:scale-95 transition-all disabled:opacity-50"
                 >
                     {sending ? (
@@ -67,14 +78,12 @@ function UserPreviewCard({ user, onConfirm, onCancel, sending }) {
                     ) : (
                         <UserPlus size={14} />
                     )}
-                    {sending ? "Sending…" : "Add Friend"}
+                    {sending ? "Saving…" : "Save Contact"}
                 </button>
             </div>
-        </div>
+        </form>
     );
 }
-
-// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AddFriend() {
     const [email, setEmail] = useState("");
@@ -109,17 +118,17 @@ export default function AddFriend() {
         }
     };
 
-    const handleSendRequest = async () => {
+    const handleConfirmAdd = async (contactName) => {
         if (!foundUser) return;
         setSending(true);
 
         try {
-            await sendFriendRequest(foundUser.id);
-            showToast(`Friend request sent to ${foundUser.full_name}!`, "success");
+            await addContact(foundUser.id, contactName);
+            showToast(`${contactName} added to contacts!`, "success");
             setFoundUser(null);
             setEmail("");
         } catch (err) {
-            showToast(err.message || "Could not send friend request.", "error");
+            showToast(err.message || "Could not save contact.", "error");
         } finally {
             setSending(false);
         }
@@ -127,7 +136,6 @@ export default function AddFriend() {
 
     return (
         <div className="p-4">
-            {/* Search Form */}
             <form onSubmit={handleSearch} className="flex gap-2">
                 <div className="relative flex-1">
                     <Search
@@ -139,7 +147,7 @@ export default function AddFriend() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Search by email address…"
+                        placeholder="Add via email…"
                         className="w-full bg-[#F5F5F5] rounded-xl py-3 pl-10 pr-4 text-[14px] font-semibold text-black placeholder:text-[#BBBBBB] outline-none focus:ring-2 focus:ring-black/10 transition-all"
                     />
                 </div>
@@ -153,21 +161,18 @@ export default function AddFriend() {
                     ) : (
                         <Search size={15} />
                     )}
-                    {searching ? "Searching…" : "Search"}
                 </button>
             </form>
 
-            {/* Preview Card */}
             {foundUser && (
                 <UserPreviewCard
                     user={foundUser}
-                    onConfirm={handleSendRequest}
+                    onConfirm={handleConfirmAdd}
                     onCancel={() => setFoundUser(null)}
                     sending={sending}
                 />
             )}
 
-            {/* Toast */}
             {toast && (
                 <Toast
                     message={toast.message}

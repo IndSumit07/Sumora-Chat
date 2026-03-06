@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { MessageSquare, Loader2, Users } from "lucide-react";
 import { getFriends } from "@/lib/friends";
 import { getOrCreateDM } from "@/lib/conversations";
+import { createClient } from "@/lib/supabase/client";
 
 export default function FriendList({ onSelectConversation }) {
     const [friends, setFriends] = useState([]);
@@ -23,6 +24,21 @@ export default function FriendList({ onSelectConversation }) {
 
     useEffect(() => {
         loadFriends();
+
+        const supabase = createClient();
+        const channel = supabase.channel('friend-list-updates')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'contacts'
+            }, () => {
+                loadFriends();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [loadFriends]);
 
     const handleMessageFriend = async (friendId, friendProfile) => {
@@ -52,8 +68,8 @@ export default function FriendList({ onSelectConversation }) {
     if (friends.length === 0) {
         return (
             <div className="text-center py-8 opacity-50">
-                <p className="text-[13px] font-bold">No friends yet</p>
-                <p className="text-[11px] mt-1">Add friends by email to chat</p>
+                <p className="text-[13px] font-bold">No contacts yet</p>
+                <p className="text-[11px] mt-1">Add contacts by email to chat</p>
             </div>
         );
     }
@@ -62,7 +78,7 @@ export default function FriendList({ onSelectConversation }) {
         <div className="mt-6 flex flex-col gap-1">
             <h3 className="px-4 text-[11px] font-black uppercase text-foreground/30 mb-2 tracking-wider flex items-center gap-1.5">
                 <Users size={12} />
-                All Friends — {friends.length}
+                All Contacts — {friends.length}
             </h3>
             {friends.map(({ friend }) => {
                 if (!friend) return null;

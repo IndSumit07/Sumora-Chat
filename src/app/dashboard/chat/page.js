@@ -9,7 +9,6 @@ import { usePresence } from "@/hooks/usePresence";
 
 // Dashboard components
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
-import SecondarySidebar from "@/components/dashboard/SecondarySidebar";
 import ConversationList from "@/components/dashboard/ConversationList";
 import ChatWindow from "@/components/dashboard/ChatWindow";
 
@@ -21,7 +20,7 @@ export default function ChatDashboard() {
   // Activate global presence tracking — writes is_online to profiles
   usePresence(userId);
 
-  const [activeTab, setActiveTab] = useState("dm"); // 'dm' | 'friends'
+  const [activeTab, setActiveTab] = useState("chat"); // 'chat' | 'media'
 
   // Selected conversation — { id, otherProfile }
   const [selectedConv, setSelectedConv] = useState(null);
@@ -80,15 +79,12 @@ export default function ChatDashboard() {
       {/* Icon Sidebar */}
       <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Inbox details Sidebar */}
-      <SecondarySidebar onSelectConversation={setSelectedConv} />
-
-      {/* Conversation List */}
       <ConversationList
         activeTab={activeTab}
         width={sidebarWidth}
         selectedConvId={selectedConv?.id ?? null}
         onSelectConversation={setSelectedConv}
+        onTabChange={setActiveTab}
       />
 
       {/* Resize Handle */}
