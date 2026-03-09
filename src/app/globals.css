@@ -58,6 +58,8 @@
   --font-display:     var(--font-heading);
 }
 
+@custom-variant dark (&:is([data-theme="dark"] *));
+
 /* ═══════════════════════════════════════════════
    SMOOTH THEME TRANSITIONS
    All elements cross-fade colors when data-theme flips.

@@ -1,4 +1,9 @@
-import { useContext } from "react";
-import { ThemeCtx } from "@/providers/ThemeProvider";
+import { useTheme as useNextTheme } from "next-themes";
 
-export const useTheme = () => useContext(ThemeCtx);
+export const useTheme = () => {
+  const { theme, setTheme } = useNextTheme();
+  return {
+    theme,
+    toggle: () => setTheme(theme === "light" ? "dark" : "light"),
+  };
+};

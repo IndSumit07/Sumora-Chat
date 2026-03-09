@@ -8,6 +8,7 @@ import {
     Send, Paperclip, Smile, X, CornerUpLeft,
     FileText, Loader2, Phone, Video, MoreHorizontal,
     Trash2, MessageSquare, ChevronDown, Lock, ArrowLeft,
+    Copy, Pencil, Check,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useCrypto } from "@/providers/CryptoProvider";
@@ -116,13 +117,83 @@ function MediaContent({ msg, isMe }) {
     return null;
 }
 
+// ─── Message Context Menu ──────────────────────────────────────────────────────
+
+function MessageMenu({ msg, isMe, onCopy, onEdit, onDelete, onReply }) {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        onCopy();
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+    };
+
+    return (
+        <div
+            className={`absolute top-1/2 -translate-y-1/2 z-30 flex items-center gap-0.5
+                opacity-0 group-hover:opacity-100 transition-all duration-150 pointer-events-none group-hover:pointer-events-auto
+                ${isMe ? "right-full mr-2" : "left-full ml-2"}`}
+        >
+            <div className="flex items-center gap-0.5 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-lg px-1 py-1">
+                {/* Reply */}
+                <button
+                    onClick={() => onReply?.(msg)}
+                    title="Reply"
+                    className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-foreground/5 transition-all"
+                >
+                    <CornerUpLeft size={14} />
+                </button>
+
+                {/* Copy — only for text messages */}
+                {msg.type === "text" && msg._decryptedText && (
+                    <button
+                        onClick={handleCopy}
+                        title="Copy"
+                        className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-foreground/5 transition-all"
+                    >
+                        {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                    </button>
+                )}
+
+                {/* Edit — only my text messages */}
+                {isMe && msg.type === "text" && (
+                    <button
+                        onClick={() => onEdit(msg)}
+                        title="Edit"
+                        className="p-1.5 rounded-lg text-foreground/40 hover:text-foreground hover:bg-foreground/5 transition-all"
+                    >
+                        <Pencil size={14} />
+                    </button>
+                )}
+
+                {/* Delete — only my messages */}
+                {isMe && (
+                    <button
+                        onClick={() => onDelete(msg)}
+                        title="Delete"
+                        className="p-1.5 rounded-lg text-foreground/40 hover:text-red-500 hover:bg-red-500/5 transition-all"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 
-function Bubble({ msg, myId, allMessages, onReply }) {
+function Bubble({ msg, myId, allMessages, onReply, onEdit, onDelete }) {
     const isMe = msg.sender_id === myId;
     const quoted = msg.reply_to_id ? allMessages.find((m) => m.id === msg.reply_to_id) : null;
     const isMedia = msg.type !== "text";
     const hasText = !!msg._decryptedText;
+
+    const handleCopy = () => {
+        if (msg._decryptedText) {
+            navigator.clipboard.writeText(msg._decryptedText).catch(() => { });
+        }
+    };
 
     return (
         <div className={`flex items-end gap-2.5 mb-1 group ${isMe ? "flex-row-reverse" : "flex-row"}`}>
@@ -143,8 +214,8 @@ function Bubble({ msg, myId, allMessages, onReply }) {
             <div className={`max-w-[65%] flex flex-col gap-1 ${isMe ? "items-end" : "items-start"}`}>
                 {/* Reply context */}
                 {quoted && (
-                    <div className={`px-3 py-2 rounded-xl text-[12px] border-l-2 border-emerald-500 max-w-full
-                        ${isMe ? "bg-emerald-600/30 text-white/60" : "bg-zinc-100 dark:bg-white/5 text-foreground/50"}
+                    <div className={`px-3 py-2 rounded-xl text-[13px] border-l-2 border-emerald-500 max-w-full
+                        ${isMe ? "bg-emerald-700/40 text-white/70" : "bg-zinc-300/60 dark:bg-white/10 text-zinc-700 dark:text-zinc-300"}
                         `}>
                         <p className="truncate">{quoted._decryptedText || "📎 Media"}</p>
                     </div>
@@ -152,46 +223,50 @@ function Bubble({ msg, myId, allMessages, onReply }) {
 
                 {/* Main bubble */}
                 <div className="relative">
-                    {/* Hover reply button */}
-                    <button
-                        onClick={() => onReply?.(msg)}
-                        className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all
-                            ${isMe ? "-left-8" : "-right-8"}
-                            p-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-foreground shadow-sm`}
-                        title="Reply"
-                    >
-                        <CornerUpLeft size={12} />
-                    </button>
+                    {/* Hover action buttons */}
+                    <MessageMenu
+                        msg={msg}
+                        isMe={isMe}
+                        onCopy={handleCopy}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        onReply={onReply}
+                    />
 
                     {isMedia ? (
                         /* ── Media message — no bubble background ── */
                         <div className="flex flex-col gap-1.5">
                             <MediaContent msg={msg} isMe={isMe} />
                             {hasText && (
-                                <p className={`text-[13.5px] leading-relaxed px-1 ${isMe ? "text-right" : "text-left"} text-foreground/80`}>
+                                <p className={`text-[15px] leading-relaxed px-1 ${isMe ? "text-right" : "text-left"} text-foreground/80`}>
                                     {msg._decryptedText}
                                 </p>
                             )}
                             <div className={`flex items-center gap-1 mt-0.5 ${isMe ? "justify-end" : "justify-start"}`}>
-                                <span className="text-[10px] text-foreground/30 font-medium">{fmtTime(msg.created_at)}</span>
+                                <span className="text-[11px] text-foreground/30 font-medium">{fmtTime(msg.created_at)}</span>
                                 {isMe && <MessageTick status={msg.status ?? "sent"} />}
                             </div>
                         </div>
                     ) : (
                         /* ── Text bubble ── */
-                        <div className={`px-4 py-2.5 rounded-2xl
+                        <div className={`px-5 py-3 rounded-2xl
                             ${isMe
-                                ? "bg-emerald-500 text-white rounded-br-sm"
-                                : "bg-zinc-100 dark:bg-zinc-800 text-foreground rounded-bl-sm"
+                                ? "bg-emerald-600 text-white rounded-br-sm"
+                                : "bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-bl-sm"
                             }`}
                         >
                             {msg.status === "sending" ? (
-                                <p className="text-[13.5px] font-medium leading-relaxed opacity-70">{msg._decryptedText}</p>
+                                <p className="text-[15px] font-medium leading-relaxed opacity-70">{msg._decryptedText}</p>
                             ) : (
-                                <p className="text-[13.5px] font-medium leading-relaxed whitespace-pre-wrap">{msg._decryptedText}</p>
+                                <p className="text-[15px] font-medium leading-relaxed whitespace-pre-wrap">{msg._decryptedText}</p>
                             )}
-                            <div className={`flex items-center gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
-                                <span className={`text-[10px] font-medium ${isMe ? "text-white/50" : "text-foreground/30"}`}>
+                            <div className={`flex items-center gap-1.5 mt-1.5 ${isMe ? "justify-end" : "justify-start"}`}>
+                                {msg.is_edited && (
+                                    <span className={`text-[10px] font-medium italic ${isMe ? "text-white/50" : "text-zinc-500 dark:text-zinc-400"}`}>
+                                        edited
+                                    </span>
+                                )}
+                                <span className={`text-[11px] font-medium ${isMe ? "text-white/60" : "text-zinc-500 dark:text-zinc-400"}`}>
                                     {fmtTime(msg.created_at)}
                                 </span>
                                 {isMe && <MessageTick status={msg.status ?? "sent"} />}
@@ -203,6 +278,46 @@ function Bubble({ msg, myId, allMessages, onReply }) {
 
             {/* My side spacer */}
             {isMe && <div className="w-1.5 shrink-0" />}
+        </div>
+    );
+}
+
+// ─── Delete Confirm Modal ──────────────────────────────────────────────────────
+
+function DeleteModal({ onConfirm, onCancel, loading }) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            onClick={onCancel}>
+            <div
+                className="bg-background border border-border rounded-2xl shadow-2xl p-6 w-[300px] flex flex-col gap-4"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex flex-col items-center gap-3 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center">
+                        <Trash2 size={20} className="text-red-500" />
+                    </div>
+                    <div>
+                        <p className="text-[15px] font-bold text-foreground">Delete Message?</p>
+                        <p className="text-[12px] text-foreground/40 mt-1">This action cannot be undone.</p>
+                    </div>
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={onCancel}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-foreground/5 text-foreground/70 text-[13px] font-semibold hover:bg-foreground/10 transition-all"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={loading}
+                        className="flex-1 px-4 py-2.5 rounded-xl bg-red-500 text-white text-[13px] font-semibold hover:bg-red-600 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                        {loading ? <Loader2 size={14} className="animate-spin" /> : null}
+                        Delete
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
@@ -252,10 +367,20 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
     const [emojiData, setEmojiData] = useState(null);
     const [showScrollBtn, setShowScrollBtn] = useState(false);
 
+    // Edit state
+    const [editingMsg, setEditingMsg] = useState(null); // the message being edited
+    const [editText, setEditText] = useState("");
+    const [saving, setSaving] = useState(false);
+
+    // Delete state
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+
     const scrollRef = useRef(null);
     const fileInputRef = useRef(null);
     const emojiPickerRef = useRef(null);
     const inputRef = useRef(null);
+    const editInputRef = useRef(null);
 
     // Load emoji data lazily
     useEffect(() => {
@@ -275,6 +400,13 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
         return () => document.removeEventListener("mousedown", handler);
     }, [showEmojiPicker]);
 
+    // Focus edit input when editing starts
+    useEffect(() => {
+        if (editingMsg) {
+            setTimeout(() => editInputRef.current?.focus(), 50);
+        }
+    }, [editingMsg]);
+
     // Scroll-to-bottom button
     const handleScroll = () => {
         if (!scrollRef.current) return;
@@ -284,11 +416,16 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
 
     const scrollToBottom = useCallback((smooth = false) => {
         if (scrollRef.current) {
-            scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+            // Wait for paint frame so height is accurate
+            setTimeout(() => {
+                scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+            }, 50);
         }
     }, []);
 
-    useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
+    useEffect(() => {
+        if (messages.length > 0) scrollToBottom(true);
+    }, [messages, scrollToBottom]);
 
     const { typingUsers, sendTyping } = useTyping(conversationId, userId);
 
@@ -311,8 +448,7 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
         if (!conversationId || !userId || !otherProfile) return;
         let gone = false;
         const supabase = createClient();
-        const msgCh = supabase.channel(`msgs:${conversationId}`);
-        const updCh = supabase.channel(`upd:${conversationId}`);
+        const msgCh = supabase.channel(`convo_events:${conversationId}`);
 
         const init = async () => {
             setLoadingMessages(true);
@@ -347,7 +483,11 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
                     _senderProfile: m.sender_id !== userId ? otherProfile : null,
                 }));
                 const decrypted = await Promise.all(ordered.map(decryptOneMsgSafe));
-                if (!gone) setMessages(decrypted);
+
+                if (!gone) {
+                    setMessages(decrypted);
+                    setTimeout(() => scrollToBottom(false), 100); // hard scroll initially
+                }
 
                 await supabase.rpc("mark_conversation_read", { p_conversation_id: conversationId });
             } catch (e) {
@@ -356,33 +496,41 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
                 if (!gone) setLoadingMessages(false);
             }
 
-            // Realtime INSERT
-            msgCh.on("postgres_changes", {
-                event: "INSERT", schema: "public", table: "messages",
-                filter: `conversation_id=eq.${conversationId}`,
-            }, async (p) => {
-                if (gone) return;
-                const nm = await decryptOneMsgSafe({
-                    ...p.new,
-                    _senderProfile: p.new.sender_id !== userId ? otherProfile : null,
-                });
-                setMessages((prev) => {
-                    if (prev.some((m) => m.id === nm.id)) return prev.map((m) => m.id === nm.id ? nm : m);
-                    return [...prev, nm];
-                });
-            }).subscribe();
-
-            // Realtime UPDATE (read receipts)
-            updCh.on("postgres_changes", {
-                event: "UPDATE", schema: "public", table: "messages",
-                filter: `conversation_id=eq.${conversationId}`,
-            }, (p) => {
-                if (gone) return;
-                const { id, status, media_url } = p.new;
-                setMessages((prev) => prev.map((m) =>
-                    m.id === id ? { ...m, status, ...(media_url && { media_url }) } : m
-                ));
-            }).subscribe();
+            // Bind single realtime channel
+            msgCh
+                .on("postgres_changes", {
+                    event: "INSERT", schema: "public", table: "messages",
+                    filter: `conversation_id=eq.${conversationId}`,
+                }, async (p) => {
+                    if (gone) return;
+                    const nm = await decryptOneMsgSafe({
+                        ...p.new,
+                        _senderProfile: p.new.sender_id !== userId ? otherProfile : null,
+                    });
+                    setMessages((prev) => {
+                        if (prev.some((m) => m.id === nm.id)) return prev.map((m) => m.id === nm.id ? nm : m);
+                        return [...prev, nm];
+                    });
+                })
+                .on("postgres_changes", {
+                    event: "UPDATE", schema: "public", table: "messages",
+                    filter: `conversation_id=eq.${conversationId}`,
+                }, async (p) => {
+                    if (gone) return;
+                    const updated = await decryptOneMsgSafe({
+                        ...p.new,
+                        _senderProfile: p.new.sender_id !== userId ? otherProfile : null,
+                    });
+                    setMessages((prev) => prev.map((m) => m.id === updated.id ? updated : m));
+                })
+                .on("postgres_changes", {
+                    event: "DELETE", schema: "public", table: "messages",
+                    filter: `conversation_id=eq.${conversationId}`,
+                }, (p) => {
+                    if (gone) return;
+                    setMessages((prev) => prev.filter((m) => m.id !== p.old.id));
+                })
+                .subscribe();
         };
 
         init();
@@ -390,9 +538,8 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
             gone = true;
             convKeyRef.current = null;
             supabase.removeChannel(msgCh);
-            supabase.removeChannel(updCh);
         };
-    }, [conversationId, userId, otherProfile, decryptOneMsgSafe]);
+    }, [conversationId, userId, otherProfile, decryptOneMsgSafe, scrollToBottom]);
 
     // ─── Send ─────────────────────────────────────────────────────────────────
 
@@ -485,6 +632,93 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
         }
     }, [conversationId, userId, decryptOneMsgSafe]);
 
+    // ─── Edit Message ─────────────────────────────────────────────────────────
+
+    const handleStartEdit = useCallback((msg) => {
+        setEditingMsg(msg);
+        setEditText(msg._decryptedText ?? "");
+    }, []);
+
+    const handleCancelEdit = useCallback(() => {
+        setEditingMsg(null);
+        setEditText("");
+    }, []);
+
+    const handleSaveEdit = useCallback(async () => {
+        const trimmed = editText.trim();
+        if (!trimmed || !convKeyRef.current || !editingMsg || saving) return;
+        setSaving(true);
+        try {
+            const supabase = createClient();
+            const { encryptedContent, iv } = await encryptMessage(trimmed, convKeyRef.current);
+            const { data, error } = await supabase
+                .from("messages")
+                .update({ encrypted_content: encryptedContent, iv, is_edited: true })
+                .eq("id", editingMsg.id)
+                .eq("sender_id", userId)
+                .select()
+                .single();
+            if (error) throw error;
+            const updated = await decryptOneMsgSafe({
+                ...data,
+                _senderProfile: editingMsg._senderProfile,
+            });
+            setMessages((p) => p.map((m) => m.id === updated.id ? updated : m));
+            setEditingMsg(null);
+            setEditText("");
+        } catch (e) {
+            console.error("[ChatWindow] edit:", e.message);
+        } finally {
+            setSaving(false);
+        }
+    }, [editText, editingMsg, saving, userId, decryptOneMsgSafe]);
+
+    const handleEditKeyDown = (e) => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); }
+        if (e.key === "Escape") handleCancelEdit();
+    };
+
+    // ─── Delete Message ───────────────────────────────────────────────────────
+
+    const handleDeleteConfirm = useCallback(async () => {
+        if (!deleteTarget || deleting) return;
+        setDeleting(true);
+        try {
+            const supabase = createClient();
+
+            // 1. Delete the physical file from storage if this is a media message
+            if (deleteTarget.media_url) {
+                try {
+                    // media_url format: .../storage/v1/object/public/chat-media/conversationId/filename.ext
+                    const parts = deleteTarget.media_url.split("/chat-media/");
+                    if (parts.length === 2) {
+                        const filePath = parts[1]; // "conversationId/filename.ext"
+                        await supabase.storage.from("chat-media").remove([filePath]);
+                    }
+                } catch (err) {
+                    console.error("[ChatWindow] storage delete:", err.message);
+                }
+            }
+
+            // 2. Delete the record from the database
+            const { error } = await supabase
+                .from("messages")
+                .delete()
+                .eq("id", deleteTarget.id)
+                .eq("sender_id", userId);
+
+            if (error) throw error;
+
+            // 3. Update the UI optimistically
+            setMessages((p) => p.filter((m) => m.id !== deleteTarget.id));
+            setDeleteTarget(null);
+        } catch (e) {
+            console.error("[ChatWindow] delete:", e.message);
+        } finally {
+            setDeleting(false);
+        }
+    }, [deleteTarget, deleting, userId]);
+
     // ─── Empty state ──────────────────────────────────────────────────────────
 
     if (!conversationId) {
@@ -507,6 +741,15 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
 
     return (
         <div className="flex-1 flex h-full min-w-0 overflow-hidden">
+            {/* Delete confirm modal */}
+            {deleteTarget && (
+                <DeleteModal
+                    onConfirm={handleDeleteConfirm}
+                    onCancel={() => setDeleteTarget(null)}
+                    loading={deleting}
+                />
+            )}
+
             <section className="flex-1 flex flex-col bg-background h-full relative overflow-hidden">
 
                 {/* ── Header ──────────────────────────────────────────────── */}
@@ -631,8 +874,15 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
                                     {grouped.map((item) =>
                                         item.type === "date"
                                             ? <DateDivider key={item.key} label={item.label} />
-                                            : <Bubble key={item.key} msg={item.msg} myId={userId}
-                                                allMessages={messages} onReply={setReplyTo} />
+                                            : <Bubble
+                                                key={item.key}
+                                                msg={item.msg}
+                                                myId={userId}
+                                                allMessages={messages}
+                                                onReply={setReplyTo}
+                                                onEdit={handleStartEdit}
+                                                onDelete={setDeleteTarget}
+                                            />
                                     )}
                                 </div>
                             )}
@@ -665,6 +915,20 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
                             </div>
                         )}
 
+                        {/* ── Edit Bar ────────────────────────────────────────── */}
+                        {editingMsg && (
+                            <div className="mx-4 mb-2 px-4 py-2.5 bg-blue-500/5 border border-blue-500/20 rounded-2xl flex items-center gap-3">
+                                <div className="w-0.5 h-8 bg-blue-500 rounded-full shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-semibold text-blue-500 uppercase tracking-wider mb-0.5">Editing message</p>
+                                    <p className="text-[12px] text-foreground/40 truncate">{editingMsg._decryptedText}</p>
+                                </div>
+                                <button onClick={handleCancelEdit} className="p-1 text-foreground/30 hover:text-foreground rounded-lg transition-colors">
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        )}
+
                         {/* ── Emoji Picker ────────────────────────────────────── */}
                         {showEmojiPicker && (
                             <div ref={emojiPickerRef}
@@ -685,52 +949,83 @@ export default function ChatWindow({ conversationId, otherProfile, onBack }) {
 
                         {/* ── Input Bar ───────────────────────────────────────── */}
                         <div className="px-4 pb-4 pt-2 shrink-0">
-                            <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 rounded-2xl px-3 py-2 border border-transparent focus-within:border-emerald-500/30 focus-within:bg-background transition-all">
+                            <div className="flex items-center gap-2 bg-foreground/5 dark:bg-foreground/10 rounded-2xl px-3 py-2 border border-transparent focus-within:border-emerald-500/30 focus-within:bg-background-secondary transition-all shadow-sm">
                                 <input
-                                    ref={inputRef}
+                                    ref={editingMsg ? editInputRef : inputRef}
                                     id="chat-message-input"
                                     type="text"
-                                    value={text}
-                                    onChange={(e) => { setText(e.target.value); sendTyping(); }}
-                                    onKeyDown={handleKeyDown}
-                                    placeholder="Message..."
+                                    value={editingMsg ? editText : text}
+                                    onChange={(e) => {
+                                        if (editingMsg) setEditText(e.target.value);
+                                        else { setText(e.target.value); sendTyping(); }
+                                    }}
+                                    onKeyDown={editingMsg ? handleEditKeyDown : handleKeyDown}
+                                    placeholder={editingMsg ? "Edit message…" : "Message..."}
                                     className="flex-1 bg-transparent border-none outline-none py-2 px-2 text-[14px] font-medium text-foreground placeholder:text-foreground/30"
                                 />
 
                                 <div className="flex items-center gap-0.5 shrink-0">
-                                    <button
-                                        id="chat-emoji-btn"
-                                        onClick={() => setShowEmojiPicker((p) => !p)}
-                                        className={`p-2 rounded-xl transition-all ${showEmojiPicker ? "text-emerald-500 bg-emerald-500/10" : "text-foreground/30 hover:text-foreground hover:bg-foreground/5"}`}
-                                    >
-                                        <Smile size={18} />
-                                    </button>
-                                    <button
-                                        id="chat-attach-btn"
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="p-2 rounded-xl text-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-all"
-                                    >
-                                        <Paperclip size={17} />
-                                    </button>
-                                    <input ref={fileInputRef} type="file" className="hidden"
-                                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
-                                        onChange={handleFileSelect} />
+                                    {editingMsg ? (
+                                        /* Edit mode buttons */
+                                        <>
+                                            <button
+                                                onClick={handleCancelEdit}
+                                                className="p-2 rounded-xl text-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-all"
+                                                title="Cancel edit"
+                                            >
+                                                <X size={17} />
+                                            </button>
+                                            <button
+                                                onClick={handleSaveEdit}
+                                                disabled={!editText.trim() || saving}
+                                                className={`ml-1 w-9 h-9 rounded-xl flex items-center justify-center transition-all
+                                                    ${editText.trim() && !saving
+                                                        ? "bg-blue-500 text-white hover:bg-blue-600 shadow-sm shadow-blue-500/30 active:scale-95"
+                                                        : "bg-foreground/5 text-foreground/20 cursor-not-allowed"
+                                                    }`}
+                                                title="Save edit"
+                                            >
+                                                {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                                            </button>
+                                        </>
+                                    ) : (
+                                        /* Normal send buttons */
+                                        <>
+                                            <button
+                                                id="chat-emoji-btn"
+                                                onClick={() => setShowEmojiPicker((p) => !p)}
+                                                className={`p-2 rounded-xl transition-all ${showEmojiPicker ? "text-emerald-500 bg-emerald-500/10" : "text-foreground/30 hover:text-foreground hover:bg-foreground/5"}`}
+                                            >
+                                                <Smile size={18} />
+                                            </button>
+                                            <button
+                                                id="chat-attach-btn"
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="p-2 rounded-xl text-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-all"
+                                            >
+                                                <Paperclip size={17} />
+                                            </button>
+                                            <input ref={fileInputRef} type="file" className="hidden"
+                                                accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                                                onChange={handleFileSelect} />
 
-                                    <button
-                                        id="chat-send-btn"
-                                        onClick={handleSend}
-                                        disabled={!text.trim() || sending}
-                                        className={`ml-1 w-9 h-9 rounded-xl flex items-center justify-center transition-all
-                                            ${text.trim() && !sending
-                                                ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm shadow-emerald-500/30 active:scale-95"
-                                                : "bg-foreground/5 text-foreground/20 cursor-not-allowed"
-                                            }`}
-                                    >
-                                        {sending
-                                            ? <Loader2 size={15} className="animate-spin" />
-                                            : <Send size={15} className={text.trim() ? "" : ""} />
-                                        }
-                                    </button>
+                                            <button
+                                                id="chat-send-btn"
+                                                onClick={handleSend}
+                                                disabled={!text.trim() || sending}
+                                                className={`ml-1 w-9 h-9 rounded-xl flex items-center justify-center transition-all
+                                                    ${text.trim() && !sending
+                                                        ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm shadow-emerald-500/30 active:scale-95"
+                                                        : "bg-foreground/5 text-foreground/20 cursor-not-allowed"
+                                                    }`}
+                                            >
+                                                {sending
+                                                    ? <Loader2 size={15} className="animate-spin" />
+                                                    : <Send size={15} className={text.trim() ? "" : ""} />
+                                                }
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>

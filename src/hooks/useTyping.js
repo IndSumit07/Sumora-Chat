@@ -16,6 +16,7 @@ export function useTyping(conversationId, userId) {
   const [typingUsers, setTypingUsers] = useState([]);
   const channelRef = useRef(null);
   const debounceRef = useRef(null);
+  const lastSentRef = useRef(0);
 
   // Fetch profiles for typing users
   const resolveProfiles = useCallback(async (userIds) => {
@@ -66,18 +67,24 @@ export function useTyping(conversationId, userId) {
   }, [conversationId, userId, resolveProfiles]);
 
   /**
-   * Call on every keystroke. Tracks typing=true, then auto-resets after 2s.
+   * Call on keystroke. Throttles tracking to avoid network lag per keystroke.
    */
   const sendTyping = useCallback(() => {
     const channel = channelRef.current;
     if (!channel) return;
 
-    channel.track({ user_id: userId, typing: true });
+    const now = Date.now();
+    // Throttle the typing=true payload to once every 2 seconds
+    if (now - lastSentRef.current > 2000) {
+      channel.track({ user_id: userId, typing: true });
+      lastSentRef.current = now;
+    }
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       channel.track({ user_id: userId, typing: false });
-    }, 2000);
+      lastSentRef.current = 0; // reset
+    }, 2500);
   }, [userId]);
 
   return { typingUsers, sendTyping };

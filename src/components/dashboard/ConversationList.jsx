@@ -250,7 +250,7 @@ function ChatsTab({ selectedConvId, onSelectConversation, userId, onTabChange })
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search…"
-                        className="w-full bg-zinc-100 dark:bg-zinc-900 rounded-xl py-2.5 pl-9 pr-4 text-[13px] outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-foreground/30 font-medium border border-transparent focus:border-emerald-500/20"
+                        className="w-full bg-foreground/5 rounded-xl py-2.5 pl-9 pr-4 text-[13px] outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all placeholder:text-foreground/30 font-medium border border-transparent focus:bg-background-secondary"
                     />
                 </div>
 

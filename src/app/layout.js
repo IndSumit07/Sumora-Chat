@@ -27,23 +27,6 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
-      <head>
-        {/*
-         * Blocking script — runs BEFORE React hydrates.
-         * Reads localStorage and sets data-theme immediately,
-         * preventing any flash of incorrect theme (FOUC).
-         */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                var t = localStorage.getItem('sumora-theme') || 'light';
-                document.documentElement.setAttribute('data-theme', t);
-              } catch(e) {}
-            `,
-          }}
-        />
-      </head>
       <body
         className={`${inter.variable} ${plusJakartaSans.variable} antialiased`}
       >

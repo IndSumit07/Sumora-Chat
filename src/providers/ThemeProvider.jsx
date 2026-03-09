@@ -1,32 +1,23 @@
 "use client";
 
-import { createContext, useContext, useLayoutEffect, useState } from "react";
-
-export const ThemeCtx = createContext({ theme: "light", toggle: () => { } });
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { useEffect, useState } from "react";
 
 export function ThemeProvider({ children }) {
-    // Initialise from the data-theme the blocking <script> already applied
-    const [theme, setTheme] = useState("light");
+    const [mounted, setMounted] = useState(false);
 
-    useLayoutEffect(() => {
-        const current =
-            document.documentElement.getAttribute("data-theme") || "light";
-        setTheme(current);
+    useEffect(() => {
+        setMounted(true);
     }, []);
 
-    const toggle = () => {
-        const next = theme === "light" ? "dark" : "light";
-        setTheme(next);
-        document.documentElement.setAttribute("data-theme", next);
-        try {
-            localStorage.setItem("sumora-theme", next);
-        } catch { }
-    };
+    if (!mounted) {
+        return <div style={{ visibility: "hidden" }}>{children}</div>;
+    }
 
     return (
-        <ThemeCtx.Provider value={{ theme, toggle }}>
+        <NextThemesProvider attribute="data-theme" defaultTheme="light" storageKey="sumora-theme">
             {children}
-        </ThemeCtx.Provider>
+        </NextThemesProvider>
     );
 }
 
