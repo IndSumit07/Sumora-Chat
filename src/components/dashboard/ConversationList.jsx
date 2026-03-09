@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Search, Loader2, PlaySquare, Plus } from "lucide-react";
+import { Search, Loader2, PlaySquare, Plus, UserPlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useCrypto } from "@/providers/CryptoProvider";
 import { useConversations } from "@/hooks/useConversations";
@@ -233,13 +233,29 @@ function ChatsTab({ selectedConvId, onSelectConversation, userId, onTabChange })
             <div className="px-4 pt-5 pb-3 shrink-0">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-[16px] font-bold text-foreground tracking-tight">Messages</h2>
-                    <button
-                        onClick={() => onTabChange("contacts")}
-                        className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-all shadow-sm shadow-emerald-500/30"
-                        title="New Message"
-                    >
-                        <Plus size={16} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => onTabChange("media")}
+                            className="md:hidden w-8 h-8 rounded-xl bg-foreground/5 text-foreground/60 flex items-center justify-center hover:bg-foreground/10 hover:text-foreground transition-all"
+                            title="Media"
+                        >
+                            <PlaySquare size={16} />
+                        </button>
+                        <button
+                            onClick={() => onTabChange("contacts")}
+                            className="md:hidden w-8 h-8 rounded-xl bg-foreground/5 text-foreground/60 flex items-center justify-center hover:bg-foreground/10 hover:text-foreground transition-all"
+                            title="Contacts"
+                        >
+                            <UserPlus size={16} />
+                        </button>
+                        <button
+                            onClick={() => onTabChange("contacts")}
+                            className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-all shadow-sm shadow-emerald-500/30"
+                            title="New Message"
+                        >
+                            <Plus size={16} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Search */}

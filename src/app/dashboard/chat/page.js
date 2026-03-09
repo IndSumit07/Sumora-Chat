@@ -99,8 +99,7 @@ export default function ChatDashboard() {
           style={{ width: isMobile ? "100%" : sidebarWidth }}
           className="h-full shrink-0 flex flex-col border-r border-border bg-background"
         >
-          {/* pb-14 clears mobile bottom nav */}
-          <div className="flex flex-col h-full pb-14 md:pb-0">
+          <div className="flex flex-col h-full">
             <ConversationList
               activeTab={activeTab}
               selectedConvId={selectedConv?.id ?? null}
@@ -128,34 +127,6 @@ export default function ChatDashboard() {
             onBack={() => setMobileView("list")}
           />
         </div>
-      )}
-
-      {/* ── Mobile Bottom Navigation ────────────────────────────────────── */}
-      {isMobile && (
-        <nav className="fixed bottom-0 left-0 right-0 h-14 bg-background/95 backdrop-blur-md border-t border-border flex items-center justify-around z-50">
-          {[
-            { id: "chat", icon: MessageSquare, label: "Chats" },
-            { id: "media", icon: PlaySquare, label: "Media" },
-            { id: "contacts", icon: UserPlus, label: "Contacts" },
-          ].map(({ id, icon: Icon, label }) => (
-            <button
-              key={id}
-              onClick={() => {
-                setActiveTab(id);
-                setMobileView("list");
-              }}
-              className={`flex flex-col items-center gap-1 px-6 py-1.5 rounded-xl transition-all
-                ${
-                  activeTab === id
-                    ? "text-emerald-500"
-                    : "text-foreground/30 hover:text-foreground/60"
-                }`}
-            >
-              <Icon size={20} strokeWidth={activeTab === id ? 2.5 : 2} />
-              <span className="text-[10px] font-semibold">{label}</span>
-            </button>
-          ))}
-        </nav>
       )}
     </main>
   );

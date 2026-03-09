@@ -335,22 +335,7 @@ export default function SignInPage() {
         <div style={{ width: "100%", maxWidth: 420 }}>
           <SumoraLogo />
 
-          <div
-            style={{
-              backgroundColor: isDark
-                ? "rgba(255,255,255,0.02)"
-                : "rgba(0,0,0,0.01)",
-              border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
-              borderRadius: 24,
-              padding: "40px 32px",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-              boxShadow: c.shadow,
-              display: "flex",
-              flexDirection: "column",
-              gap: 24,
-            }}
-          >
+          <div className="flex flex-col gap-6 py-6 sm:p-10 sm:rounded-3xl sm:border sm:border-black/10 dark:sm:border-white/10 sm:bg-black/2 dark:sm:bg-white/2 sm:backdrop-blur-xl sm:shadow-xl w-full">
             <div style={{ textAlign: "center" }}>
               <h1
                 style={{
