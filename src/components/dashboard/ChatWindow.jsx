@@ -1,113 +1,113 @@
 "use client";
 
 import React, {
-    useState,
-    useRef,
-    useEffect,
-    useCallback,
+    useState, useRef, useEffect, useCallback,
 } from "react";
+import dynamic from "next/dynamic";
 import {
-    Send,
-    Paperclip,
-    Image as ImageIcon,
-    Smile,
-    X,
-    CornerUpLeft,
-    FileText,
-    Loader2,
-    Phone,
-    Video,
-    MoreHorizontal,
-    Search,
-    Trash2,
+    Send, Paperclip, Smile, X, CornerUpLeft,
+    FileText, Loader2, Phone, Video, MoreHorizontal,
+    Trash2, MessageSquare, ChevronDown, Lock, ArrowLeft,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useCrypto } from "@/providers/CryptoProvider";
 import { decryptConversationKey, encryptMessage, decryptMessage } from "@/lib/crypto";
 import { useTyping } from "@/hooks/useTyping";
 import MessageTick from "@/components/MessageTick";
-import OnlineIndicator from "@/components/OnlineIndicator";
 import { uploadMedia, getMediaMessageType, formatFileSize } from "@/lib/media";
+
+const EmojiPicker = dynamic(
+    () => import("@emoji-mart/react").then((m) => m.default),
+    { ssr: false, loading: () => null }
+);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatMsgTime(isoString) {
-    if (!isoString) return "";
-    return new Date(isoString).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-    });
+function fmtTime(iso) {
+    if (!iso) return "";
+    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-// ─── Reply Quote Bar ──────────────────────────────────────────────────────────
+function fmtDate(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
 
-function ReplyBar({ replyTo, onCancel }) {
-    return (
-        <div className="flex items-center gap-3 px-5 py-3 bg-[#F0FDF4] border-l-4 border-[#22C55E] mx-4 mb-2 rounded-xl">
-            <CornerUpLeft size={14} className="text-[#22C55E] shrink-0" />
-            <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-black text-[#22C55E] uppercase tracking-wide mb-0.5">
-                    Reply to
-                </p>
-                <p className="text-[13px] text-black/70 font-semibold truncate">
-                    {replyTo._decryptedText ?? "Message"}
-                </p>
-            </div>
-            <button
-                onClick={onCancel}
-                className="p-1 rounded-lg text-[#888] hover:text-black transition-all"
-            >
-                <X size={14} />
-            </button>
-        </div>
-    );
+    if (d.toDateString() === today.toDateString()) return "Today";
+    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-// ─── Quoted Message Inside Bubble ─────────────────────────────────────────────
-
-function QuotedMessage({ quoted }) {
-    if (!quoted) return null;
-    return (
-        <div className="mb-2 px-3 py-2 bg-black/5 rounded-xl border-l-4 border-[#22C55E]/60">
-            <p className="text-[11px] text-[#888] font-bold truncate">
-                {quoted._decryptedText ?? "Message"}
-            </p>
-        </div>
-    );
+function groupByDate(messages) {
+    const groups = [];
+    let lastDate = null;
+    for (const msg of messages) {
+        const date = fmtDate(msg.created_at);
+        if (date !== lastDate) {
+            groups.push({ type: "date", label: date, key: `date-${date}-${msg.id}` });
+            lastDate = date;
+        }
+        groups.push({ type: "msg", msg, key: msg.id });
+    }
+    return groups;
 }
 
 // ─── Media Renderer ───────────────────────────────────────────────────────────
 
-function MediaContent({ msg }) {
-    if (msg.type === "image" && msg.media_url) {
-        return (
+function MediaContent({ msg, isMe }) {
+    const [err, setErr] = useState(false);
+
+    if ((msg.type === "image" || msg.type === "gif") && msg.media_url) {
+        return err ? (
+            <div className="w-52 h-36 rounded-2xl bg-white/10 flex items-center justify-center text-white/40">
+                <FileText size={24} />
+            </div>
+        ) : (
             <img
                 src={msg.media_url}
-                alt="Shared image"
-                className="max-w-[240px] rounded-xl object-cover cursor-pointer hover:opacity-90 transition-all"
+                alt="Image"
+                className="max-w-[260px] max-h-[320px] rounded-2xl object-cover cursor-pointer hover:brightness-90 transition-all"
+                onError={() => setErr(true)}
+                onClick={() => window.open(msg.media_url, "_blank")}
+            />
+        );
+    }
+    if (msg.type === "video" && msg.media_url) {
+        return (
+            <video
+                controls
+                src={msg.media_url}
+                className="max-w-[280px] rounded-2xl"
+                style={{ maxHeight: 200 }}
             />
         );
     }
     if (msg.type === "audio" && msg.media_url) {
-        return (
-            <audio controls src={msg.media_url} className="max-w-[240px]" />
-        );
+        return <audio controls src={msg.media_url} className="max-w-[220px] mt-1 accent-emerald-500" />;
     }
-    if (msg.type === "document" && msg.media_url) {
+    if (msg.media_url) {
+        const name = msg.file_name ?? msg.media_type ?? "File";
+        const size = msg.file_size ?? msg.media_size ?? 0;
         return (
             <a
                 href={msg.media_url}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-3 px-4 py-3 bg-white/60 rounded-xl border border-black/10 hover:bg-white/80 transition-all max-w-[240px]"
+                className={`flex items-center gap-3 px-4 py-3 rounded-2xl border max-w-[240px] transition-all
+                    ${isMe
+                        ? "bg-white/10 border-white/10 hover:bg-white/20"
+                        : "bg-zinc-50 border-zinc-100 hover:bg-zinc-100 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10"
+                    }`}
             >
-                <FileText size={22} className="text-[#22C55E] shrink-0" />
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isMe ? "bg-white/10" : "bg-emerald-500/10"}`}>
+                    <FileText size={17} className={isMe ? "text-white/70" : "text-emerald-500"} />
+                </div>
                 <div className="min-w-0">
-                    <p className="text-[13px] font-bold text-black truncate">
-                        {msg.file_name ?? "Document"}
-                    </p>
-                    {msg.file_size && (
-                        <p className="text-[11px] text-[#888]">{formatFileSize(msg.file_size)}</p>
+                    <p className={`text-[13px] font-semibold truncate ${isMe ? "text-white" : "text-foreground"}`}>{name}</p>
+                    {size > 0 && (
+                        <p className={`text-[11px] mt-0.5 ${isMe ? "text-white/50" : "text-foreground/40"}`}>{formatFileSize(size)}</p>
                     )}
                 </div>
             </a>
@@ -116,102 +116,131 @@ function MediaContent({ msg }) {
     return null;
 }
 
-// ─── Typing Dots ──────────────────────────────────────────────────────────────
+// ─── Message Bubble ───────────────────────────────────────────────────────────
 
-function TypingDots({ names }) {
-    if (!names || names.length === 0) return null;
-    const label = names.length === 1
-        ? `${names[0]} is typing`
-        : `${names.slice(0, 2).join(", ")} are typing`;
-
-    return (
-        <div className="flex items-center gap-2 px-8 py-1 text-[12px] text-[#888888] font-semibold">
-            <span>{label}</span>
-            <span className="flex gap-0.5">
-                {[0, 1, 2].map((i) => (
-                    <span
-                        key={i}
-                        className="w-1 h-1 rounded-full bg-[#888888] animate-bounce"
-                        style={{ animationDelay: `${i * 0.15}s` }}
-                    />
-                ))}
-            </span>
-        </div>
-    );
-}
-
-// ─── Single Message Bubble ────────────────────────────────────────────────────
-
-function MessageBubble({ msg, myId, allMessages }) {
+function Bubble({ msg, myId, allMessages, onReply }) {
     const isMe = msg.sender_id === myId;
-    const quotedMsg = msg.reply_to_id
-        ? allMessages.find((m) => m.id === msg.reply_to_id)
-        : null;
+    const quoted = msg.reply_to_id ? allMessages.find((m) => m.id === msg.reply_to_id) : null;
+    const isMedia = msg.type !== "text";
+    const hasText = !!msg._decryptedText;
 
     return (
-        <div className={`flex gap-3 mb-5 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-            {/* Avatar (only for others) */}
+        <div className={`flex items-end gap-2.5 mb-1 group ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+            {/* Other user avatar */}
             {!isMe && (
-                <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 mt-1 bg-gray-100 border border-gray-200">
+                <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 mb-0.5 bg-zinc-200 dark:bg-zinc-700">
                     {msg._senderProfile?.avatar_url ? (
-                        <img
-                            src={msg._senderProfile.avatar_url}
-                            alt={msg._senderProfile.full_name}
-                            className="w-full h-full object-cover"
-                        />
+                        <img src={msg._senderProfile.avatar_url} alt="" className="w-full h-full object-cover"
+                            onError={(e) => { e.target.style.display = "none"; }} />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-[14px] font-black">
+                        <div className="w-full h-full flex items-center justify-center text-[11px] font-black text-zinc-500 dark:text-zinc-300">
                             {msg._senderProfile?.full_name?.[0]?.toUpperCase() ?? "?"}
                         </div>
                     )}
                 </div>
             )}
 
-            <div className={`max-w-[65%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-                {/* Quoted message */}
-                {quotedMsg && <QuotedMessage quoted={quotedMsg} />}
-
-                {/* Bubble */}
-                <div
-                    className={`px-5 py-3.5 rounded-[20px] shadow-sm
-            ${isMe
-                            ? "bg-[#22C55E] text-white rounded-tr-[6px]"
-                            : "bg-[#F5F5F5] text-black rounded-tl-[6px]"}`}
-                >
-                    {/* Media */}
-                    {msg.type !== "text" && <MediaContent msg={msg} />}
-
-                    {/* Text */}
-                    {msg._decryptedText && (
-                        <p className="text-[14px] font-semibold leading-relaxed whitespace-pre-wrap">
-                            {msg._decryptedText}
-                        </p>
-                    )}
-
-                    {/* Time + tick */}
-                    <div className={`flex items-center gap-1.5 mt-1. text-right justify-end`}>
-                        <span className={`text-[10px] font-semibold ${isMe ? "text-white/60" : "text-[#AAAAAA]"}`}>
-                            {formatMsgTime(msg.created_at)}
-                        </span>
-                        {isMe && <MessageTick status={msg.status ?? "sent"} />}
+            <div className={`max-w-[65%] flex flex-col gap-1 ${isMe ? "items-end" : "items-start"}`}>
+                {/* Reply context */}
+                {quoted && (
+                    <div className={`px-3 py-2 rounded-xl text-[12px] border-l-2 border-emerald-500 max-w-full
+                        ${isMe ? "bg-emerald-600/30 text-white/60" : "bg-zinc-100 dark:bg-white/5 text-foreground/50"}
+                        `}>
+                        <p className="truncate">{quoted._decryptedText || "📎 Media"}</p>
                     </div>
+                )}
+
+                {/* Main bubble */}
+                <div className="relative">
+                    {/* Hover reply button */}
+                    <button
+                        onClick={() => onReply?.(msg)}
+                        className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all
+                            ${isMe ? "-left-8" : "-right-8"}
+                            p-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 hover:text-foreground shadow-sm`}
+                        title="Reply"
+                    >
+                        <CornerUpLeft size={12} />
+                    </button>
+
+                    {isMedia ? (
+                        /* ── Media message — no bubble background ── */
+                        <div className="flex flex-col gap-1.5">
+                            <MediaContent msg={msg} isMe={isMe} />
+                            {hasText && (
+                                <p className={`text-[13.5px] leading-relaxed px-1 ${isMe ? "text-right" : "text-left"} text-foreground/80`}>
+                                    {msg._decryptedText}
+                                </p>
+                            )}
+                            <div className={`flex items-center gap-1 mt-0.5 ${isMe ? "justify-end" : "justify-start"}`}>
+                                <span className="text-[10px] text-foreground/30 font-medium">{fmtTime(msg.created_at)}</span>
+                                {isMe && <MessageTick status={msg.status ?? "sent"} />}
+                            </div>
+                        </div>
+                    ) : (
+                        /* ── Text bubble ── */
+                        <div className={`px-4 py-2.5 rounded-2xl
+                            ${isMe
+                                ? "bg-emerald-500 text-white rounded-br-sm"
+                                : "bg-zinc-100 dark:bg-zinc-800 text-foreground rounded-bl-sm"
+                            }`}
+                        >
+                            {msg.status === "sending" ? (
+                                <p className="text-[13.5px] font-medium leading-relaxed opacity-70">{msg._decryptedText}</p>
+                            ) : (
+                                <p className="text-[13.5px] font-medium leading-relaxed whitespace-pre-wrap">{msg._decryptedText}</p>
+                            )}
+                            <div className={`flex items-center gap-1 mt-1 ${isMe ? "justify-end" : "justify-start"}`}>
+                                <span className={`text-[10px] font-medium ${isMe ? "text-white/50" : "text-foreground/30"}`}>
+                                    {fmtTime(msg.created_at)}
+                                </span>
+                                {isMe && <MessageTick status={msg.status ?? "sent"} />}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {/* My side spacer */}
+            {isMe && <div className="w-1.5 shrink-0" />}
+        </div>
+    );
+}
+
+// ─── Typing Indicator ─────────────────────────────────────────────────────────
+
+function TypingIndicator({ names }) {
+    if (!names?.length) return null;
+    return (
+        <div className="flex items-center gap-2 px-4 py-2">
+            <div className="flex gap-1 items-center">
+                {[0, 1, 2].map((i) => (
+                    <span key={i} className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce"
+                        style={{ animationDelay: `${i * 0.15}s`, animationDuration: "0.9s" }} />
+                ))}
+            </div>
+            <span className="text-[12px] text-foreground/40 font-medium">{names[0]} is typing…</span>
+        </div>
+    );
+}
+
+// ─── Date Divider ─────────────────────────────────────────────────────────────
+
+function DateDivider({ label }) {
+    return (
+        <div className="flex items-center gap-3 my-4">
+            <div className="flex-1 h-px bg-border/50" />
+            <span className="text-[11px] font-semibold text-foreground/30 bg-background px-2">{label}</span>
+            <div className="flex-1 h-px bg-border/50" />
         </div>
     );
 }
 
 // ─── MAIN CHAT WINDOW ─────────────────────────────────────────────────────────
 
-/**
- * ChatWindow
- * Props:
- *   conversationId  — string UUID of the conversation
- *   otherProfile    — { id, full_name, avatar_url, public_key }
- */
-export default function ChatWindow({ conversationId, otherProfile }) {
+export default function ChatWindow({ conversationId, otherProfile, onBack }) {
     const { userId } = useCrypto();
-    const convKeyRef = useRef(null);   // CryptoKey — NEVER put in state
+    const convKeyRef = useRef(null);
 
     const [messages, setMessages] = useState([]);
     const [loadingMessages, setLoadingMessages] = useState(true);
@@ -219,525 +248,489 @@ export default function ChatWindow({ conversationId, otherProfile }) {
     const [replyTo, setReplyTo] = useState(null);
     const [sending, setSending] = useState(false);
     const [showContactInfo, setShowContactInfo] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [emojiData, setEmojiData] = useState(null);
+    const [showScrollBtn, setShowScrollBtn] = useState(false);
 
     const scrollRef = useRef(null);
     const fileInputRef = useRef(null);
+    const emojiPickerRef = useRef(null);
+    const inputRef = useRef(null);
 
-    // ─── Typing ───────────────────────────────────────────────────────────────
+    // Load emoji data lazily
+    useEffect(() => {
+        if (showEmojiPicker && !emojiData) {
+            import("@emoji-mart/data").then((m) => setEmojiData(m.default ?? m));
+        }
+    }, [showEmojiPicker, emojiData]);
 
-    const { typingUsers, sendTyping } = useTyping(conversationId, userId);
-    const typingNames = typingUsers.map((u) => u.full_name?.split(" ")[0] ?? "Someone");
+    // Close emoji on outside click
+    useEffect(() => {
+        const handler = (e) => {
+            if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
+                setShowEmojiPicker(false);
+            }
+        };
+        if (showEmojiPicker) document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, [showEmojiPicker]);
 
-    // ─── Scroll to bottom ────────────────────────────────────────────────────
+    // Scroll-to-bottom button
+    const handleScroll = () => {
+        if (!scrollRef.current) return;
+        const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+        setShowScrollBtn(scrollHeight - scrollTop - clientHeight > 200);
+    };
 
-    const scrollToBottom = useCallback(() => {
+    const scrollToBottom = useCallback((smooth = false) => {
         if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: smooth ? "smooth" : "auto" });
         }
     }, []);
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages, scrollToBottom]);
+    useEffect(() => { scrollToBottom(); }, [messages, scrollToBottom]);
 
-    // ─── Decrypt a message row ───────────────────────────────────────────────
+    const { typingUsers, sendTyping } = useTyping(conversationId, userId);
+
+    // ─── Decrypt ──────────────────────────────────────────────────────────────
 
     const decryptOneMsgSafe = useCallback(async (msgRow) => {
-        if (!convKeyRef.current) return { ...msgRow, _decryptedText: "" };
-        if (msgRow.type !== "text" || !msgRow.encrypted_content || !msgRow.iv) {
-            return { ...msgRow, _decryptedText: "" };
-        }
+        if (!convKeyRef.current || msgRow.type !== "text") return { ...msgRow, _decryptedText: "" };
+        if (!msgRow.encrypted_content || !msgRow.iv) return { ...msgRow, _decryptedText: "" };
         try {
             const plain = await decryptMessage(msgRow.encrypted_content, msgRow.iv, convKeyRef.current);
-            // NOTE: We intentionally do NOT log `plain` (security rule)
             return { ...msgRow, _decryptedText: plain };
         } catch {
             return { ...msgRow, _decryptedText: "🔒" };
         }
     }, []);
 
-    // ─── Mount: init key + load messages ────────────────────────────────────
+    // ─── Init ─────────────────────────────────────────────────────────────────
 
     useEffect(() => {
         if (!conversationId || !userId || !otherProfile) return;
-
-        let cleanedUp = false;
-        let channels = [];
-
+        let gone = false;
         const supabase = createClient();
-
-        // ─── Create Channels Synchronously ───
-        const msgChannel = supabase.channel(`messages:${conversationId}`);
-        const receiptChannel = supabase.channel(`msg_updates:${conversationId}`);
-        channels.push(msgChannel, receiptChannel);
+        const msgCh = supabase.channel(`msgs:${conversationId}`);
+        const updCh = supabase.channel(`upd:${conversationId}`);
 
         const init = async () => {
             setLoadingMessages(true);
             convKeyRef.current = null;
+            setMessages([]);
 
             try {
-                // 1. Fetch MY participant row to get encrypted_key
-                const { data: myParticipant } = await supabase
+                const { data: myPart } = await supabase
                     .from("conversation_participants")
                     .select("encrypted_key")
                     .eq("conversation_id", conversationId)
                     .eq("user_id", userId)
                     .maybeSingle();
 
-                if (!myParticipant?.encrypted_key || !otherProfile?.public_key) {
+                if (!myPart?.encrypted_key || !otherProfile?.public_key) {
                     setLoadingMessages(false);
                     return;
                 }
 
-                // 2. Decrypt conversation key — store in ref, NEVER state
-                const ck = await decryptConversationKey(
-                    myParticipant.encrypted_key,
-                    otherProfile.public_key,
-                    userId
-                );
-                if (!cleanedUp) convKeyRef.current = ck;
-                else return;
+                const ck = await decryptConversationKey(myPart.encrypted_key, otherProfile.public_key, userId);
+                if (!gone) convKeyRef.current = ck; else return;
 
-                // 3. Fetch last 50 messages
-                const { data: rawMsgs } = await supabase
+                const { data: raw } = await supabase
                     .from("messages")
                     .select("*")
                     .eq("conversation_id", conversationId)
                     .order("created_at", { ascending: false })
-                    .limit(50);
+                    .limit(60);
 
-                const orderedRaw = (rawMsgs ?? []).reverse().map(m => ({
+                const ordered = (raw ?? []).reverse().map((m) => ({
                     ...m,
-                    _senderProfile: m.sender_id === userId ? null : otherProfile
+                    _senderProfile: m.sender_id !== userId ? otherProfile : null,
                 }));
-                const decrypted = await Promise.all(orderedRaw.map(decryptOneMsgSafe));
-                if (!cleanedUp) setMessages(decrypted);
+                const decrypted = await Promise.all(ordered.map(decryptOneMsgSafe));
+                if (!gone) setMessages(decrypted);
 
-                // 4. Mark conversation read
-                await supabase.rpc("mark_conversation_read", {
-                    p_conversation_id: conversationId,
-                });
-            } catch (err) {
-                console.error("[ChatWindow] init error:", err.message);
+                await supabase.rpc("mark_conversation_read", { p_conversation_id: conversationId });
+            } catch (e) {
+                console.error("[ChatWindow] init:", e.message);
             } finally {
-                if (!cleanedUp) setLoadingMessages(false);
+                if (!gone) setLoadingMessages(false);
             }
 
-            // ─── Realtime Subscriptions ──────────────────────────────────────────
+            // Realtime INSERT
+            msgCh.on("postgres_changes", {
+                event: "INSERT", schema: "public", table: "messages",
+                filter: `conversation_id=eq.${conversationId}`,
+            }, async (p) => {
+                if (gone) return;
+                const nm = await decryptOneMsgSafe({
+                    ...p.new,
+                    _senderProfile: p.new.sender_id !== userId ? otherProfile : null,
+                });
+                setMessages((prev) => {
+                    if (prev.some((m) => m.id === nm.id)) return prev.map((m) => m.id === nm.id ? nm : m);
+                    return [...prev, nm];
+                });
+            }).subscribe();
 
-            // A) New messages INSERT
-            msgChannel
-                .on(
-                    "postgres_changes",
-                    {
-                        event: "INSERT",
-                        schema: "public",
-                        table: "messages",
-                        filter: `conversation_id=eq.${conversationId}`,
-                    },
-                    async (payload) => {
-                        if (cleanedUp) return;
-                        const payloadMsg = {
-                            ...payload.new,
-                            _senderProfile: payload.new.sender_id === userId ? null : otherProfile
-                        };
-                        const newMsg = await decryptOneMsgSafe(payloadMsg);
-                        setMessages((prev) => {
-                            const exists = prev.some((m) => m.id === newMsg.id);
-                            if (exists) {
-                                return prev.map((m) => (m.id === newMsg.id ? newMsg : m));
-                            }
-                            return [...prev, newMsg];
-                        });
-                    }
-                )
-                .subscribe();
-
-            // B) messages UPDATE → catch status changes (triggered by DB receipt trigger)
-            receiptChannel
-                .on(
-                    "postgres_changes",
-                    {
-                        event: "UPDATE",
-                        schema: "public",
-                        table: "messages",
-                        filter: `conversation_id=eq.${conversationId}`,
-                    },
-                    (payload) => {
-                        if (cleanedUp) return;
-                        const { id, status } = payload.new;
-                        setMessages((prev) =>
-                            prev.map((m) =>
-                                m.id === id ? { ...m, status } : m
-                            )
-                        );
-                    }
-                )
-                .subscribe();
+            // Realtime UPDATE (read receipts)
+            updCh.on("postgres_changes", {
+                event: "UPDATE", schema: "public", table: "messages",
+                filter: `conversation_id=eq.${conversationId}`,
+            }, (p) => {
+                if (gone) return;
+                const { id, status, media_url } = p.new;
+                setMessages((prev) => prev.map((m) =>
+                    m.id === id ? { ...m, status, ...(media_url && { media_url }) } : m
+                ));
+            }).subscribe();
         };
 
         init();
-
         return () => {
-            cleanedUp = true;
+            gone = true;
             convKeyRef.current = null;
-            channels.forEach((ch) => supabase.removeChannel(ch));
-            channels = [];
+            supabase.removeChannel(msgCh);
+            supabase.removeChannel(updCh);
         };
     }, [conversationId, userId, otherProfile, decryptOneMsgSafe]);
 
-    // ─── Send Message ────────────────────────────────────────────────────────
+    // ─── Send ─────────────────────────────────────────────────────────────────
 
     const handleSend = useCallback(async () => {
         const trimmed = text.trim();
         if (!trimmed || !convKeyRef.current || sending) return;
-
         setSending(true);
         const supabase = createClient();
         const tempId = crypto.randomUUID();
 
-        // Optimistic UI
         const optimistic = {
-            id: tempId,
-            conversation_id: conversationId,
-            sender_id: userId,
-            type: "text",
-            status: "sending",
-            created_at: new Date().toISOString(),
-            reply_to_id: replyTo?.id ?? null,
-            _decryptedText: trimmed,
+            id: tempId, conversation_id: conversationId, sender_id: userId,
+            type: "text", status: "sending", created_at: new Date().toISOString(),
+            reply_to_id: replyTo?.id ?? null, _decryptedText: trimmed,
         };
-
-        setMessages((prev) => [...prev, optimistic]);
-        const capturedReplyTo = replyTo;
-        setText("");
-        setReplyTo(null);
+        setMessages((p) => [...p, optimistic]);
+        const capturedReply = replyTo;
+        setText(""); setReplyTo(null); setShowEmojiPicker(false);
 
         try {
             const { encryptedContent, iv } = await encryptMessage(trimmed, convKeyRef.current);
-
-            const { data, error } = await supabase
-                .from("messages")
-                .insert({
-                    id: tempId,
-                    conversation_id: conversationId,
-                    sender_id: userId,
-                    encrypted_content: encryptedContent,
-                    iv,
-                    type: "text",
-                    status: "sent",
-                    reply_to_id: capturedReplyTo?.id ?? null,
-                })
-                .select()
-                .single();
-
+            const { data, error } = await supabase.from("messages")
+                .insert({ id: tempId, conversation_id: conversationId, sender_id: userId, encrypted_content: encryptedContent, iv, type: "text", status: "sent", reply_to_id: capturedReply?.id ?? null })
+                .select().single();
             if (error) throw error;
-
-            // Replace optimistic with confirmed row
-            const confirmed = await decryptOneMsgSafe(data);
-            setMessages((prev) =>
-                prev.map((m) => (m.id === tempId ? confirmed : m))
-            );
-        } catch (err) {
-            console.error("[ChatWindow] send error:", err.message);
-            // Remove optimistic on fail
-            setMessages((prev) => prev.filter((m) => m.id !== tempId));
+            const confirmed = await decryptOneMsgSafe({ ...data, _senderProfile: null });
+            setMessages((p) => p.map((m) => m.id === tempId ? confirmed : m));
+        } catch (e) {
+            console.error("[ChatWindow] send:", e.message);
+            setMessages((p) => p.filter((m) => m.id !== tempId));
         } finally {
             setSending(false);
         }
     }, [text, sending, conversationId, userId, replyTo, decryptOneMsgSafe]);
 
     const handleKeyDown = (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+        if (e.key === "Escape") setShowEmojiPicker(false);
     };
 
-    // ─── Media Upload ────────────────────────────────────────────────────────
+    // ─── Emoji ────────────────────────────────────────────────────────────────
+
+    const handleEmojiSelect = useCallback((emoji) => {
+        setText((p) => p + (emoji.native ?? emoji.emoji ?? ""));
+        setTimeout(() => inputRef.current?.focus(), 0);
+    }, []);
+
+    // ─── File Upload ──────────────────────────────────────────────────────────
 
     const handleFileSelect = useCallback(async (e) => {
         const file = e.target.files?.[0];
-        if (!file || !convKeyRef.current) return;
+        if (!file || !convKeyRef.current) { e.target.value = ""; return; }
 
         const msgType = getMediaMessageType(file.type);
         const supabase = createClient();
         const tempId = crypto.randomUUID();
 
-        // Optimistic placeholder
         const optimistic = {
-            id: tempId,
-            conversation_id: conversationId,
-            sender_id: userId,
-            type: msgType,
-            status: "sending",
-            created_at: new Date().toISOString(),
-            _decryptedText: "",
-            file_name: file.name,
-            file_size: file.size,
-            media_url: msgType === "image" ? URL.createObjectURL(file) : null,
+            id: tempId, conversation_id: conversationId, sender_id: userId,
+            type: msgType, status: "sending", created_at: new Date().toISOString(),
+            _decryptedText: "", file_name: file.name, file_size: file.size,
+            media_size: file.size, media_type: file.type,
+            media_url: (msgType === "image" || msgType === "video" || msgType === "gif")
+                ? URL.createObjectURL(file) : null,
+            _senderProfile: null,
         };
-
-        setMessages((prev) => [...prev, optimistic]);
+        setMessages((p) => [...p, optimistic]);
+        setSending(true);
 
         try {
-            const { url, fileName, fileSize } = await uploadMedia(file, conversationId);
-
-            // Encrypt empty caption
+            const { url, fileName, fileSize, mimeType } = await uploadMedia(file, conversationId);
             const { encryptedContent, iv } = await encryptMessage("", convKeyRef.current);
-
-            const { data, error } = await supabase
-                .from("messages")
+            const { data, error } = await supabase.from("messages")
                 .insert({
-                    id: tempId,
-                    conversation_id: conversationId,
-                    sender_id: userId,
-                    encrypted_content: encryptedContent,
-                    iv,
-                    type: msgType,
-                    status: "sent",
-                    media_url: url,
-                    file_name: fileName,
-                    file_size: fileSize,
+                    id: tempId, conversation_id: conversationId, sender_id: userId,
+                    encrypted_content: encryptedContent, iv, type: msgType, status: "sent",
+                    media_url: url, file_name: fileName, file_size: fileSize,
+                    media_type: mimeType, media_size: fileSize,
                 })
-                .select()
-                .single();
-
+                .select().single();
             if (error) throw error;
-
-            setMessages((prev) =>
-                prev.map((m) => (m.id === tempId ? { ...data, _decryptedText: "" } : m))
-            );
-        } catch (err) {
-            console.error("[ChatWindow] media upload error:", err.message);
-            setMessages((prev) => prev.filter((m) => m.id !== tempId));
+            const confirmed = await decryptOneMsgSafe({ ...data, _senderProfile: null });
+            setMessages((p) => p.map((m) => m.id === tempId ? confirmed : m));
+        } catch (e) {
+            console.error("[ChatWindow] upload:", e.message);
+            setMessages((p) => p.filter((m) => m.id !== tempId));
+        } finally {
+            setSending(false);
+            e.target.value = "";
         }
+    }, [conversationId, userId, decryptOneMsgSafe]);
 
-        // Reset file input
-        e.target.value = "";
-    }, [conversationId, userId]);
-
-    // ─── Render ───────────────────────────────────────────────────────────────
+    // ─── Empty state ──────────────────────────────────────────────────────────
 
     if (!conversationId) {
         return (
-            <section className="flex-1 flex flex-col items-center justify-center bg-background text-foreground/30 gap-4 border-r border-border">
-                <div className="w-16 h-16 rounded-2xl bg-foreground/5 flex items-center justify-center">
-                    <Send size={28} className="text-foreground/20" />
+            <section className="flex-1 flex flex-col items-center justify-center bg-background h-full gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                    <MessageSquare size={26} className="text-emerald-500" />
                 </div>
-                <p className="text-[15px] font-bold">Select a conversation to start chatting</p>
-                <p className="text-[13px] font-medium text-foreground/20">Your messages are end-to-end encrypted</p>
+                <div className="text-center">
+                    <p className="text-[15px] font-semibold text-foreground/70">Select a conversation</p>
+                    <p className="text-[12px] text-foreground/30 mt-1 flex items-center gap-1 justify-center">
+                        <Lock size={10} /> End-to-end encrypted
+                    </p>
+                </div>
             </section>
         );
     }
 
+    const grouped = groupByDate(messages);
+
     return (
-        <div className="flex-1 flex h-full min-w-0">
-            {/* Main Chat Area */}
-            <section className="flex-1 flex flex-col bg-white dark:bg-black relative overflow-hidden border-r border-[#EEEEEE] dark:border-foreground/10 h-full">
-                {/* ── Header ─────────────────────────────────────────────────── */}
-                <div
-                    onClick={() => setShowContactInfo(!showContactInfo)}
-                    className="px-6 py-3 flex items-center justify-between border-b border-[#F5F5F5] dark:border-foreground/10 shrink-0 cursor-pointer hover:bg-foreground/5 transition-colors"
-                >
-                    <div className="flex items-center gap-4">
-                        <div className="relative">
-                            <div className="w-10 h-10 rounded-full overflow-hidden bg-foreground/10 border border-border">
-                                {otherProfile?.avatar_url ? (
-                                    <img src={otherProfile.avatar_url} alt={otherProfile.full_name} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center font-black text-foreground/30 text-[15px]">
-                                        {otherProfile?.full_name?.charAt(0) ?? "?"}
-                                    </div>
-                                )}
+        <div className="flex-1 flex h-full min-w-0 overflow-hidden">
+            <section className="flex-1 flex flex-col bg-background h-full relative overflow-hidden">
+
+                {/* ── Header ──────────────────────────────────────────────── */}
+                <div className="h-[60px] px-5 flex items-center justify-between border-b border-border/60 shrink-0 bg-background/80 backdrop-blur-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                        {/* Mobile back button */}
+                        {onBack && (
+                            <button
+                                onClick={onBack}
+                                className="sm:hidden p-2 -ml-1 rounded-xl text-foreground/50 hover:text-foreground hover:bg-foreground/5 transition-all shrink-0"
+                            >
+                                <ArrowLeft size={18} />
+                            </button>
+                        )}
+                        <div
+                            className="flex items-center gap-3 min-w-0 cursor-pointer"
+                            onClick={() => setShowContactInfo(!showContactInfo)}
+                        >
+                            <div className="relative shrink-0">
+                                <div className="w-9 h-9 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700">
+                                    {otherProfile?.avatar_url ? (
+                                        <img src={otherProfile.avatar_url} alt="" className="w-full h-full object-cover"
+                                            onError={(e) => { e.target.style.display = "none"; }} />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center font-bold text-zinc-500 dark:text-zinc-300 text-[13px]">
+                                            {otherProfile?.full_name?.charAt(0) ?? "?"}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-background
+                                ${otherProfile?.is_online ? "bg-emerald-500" : "bg-zinc-400"}`} />
                             </div>
-                            {otherProfile?.is_online && (
-                                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-background" />
-                            )}
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-[15px] font-bold text-foreground leading-tight">
-                                {otherProfile?.full_name || "Unknown Contact"}
-                            </span>
-                            <span className="text-[12px] font-semibold text-foreground/50">
-                                {otherProfile?.is_online ? "Active Now" : "Offline"}
-                            </span>
+                            <div className="min-w-0">
+                                <p className="text-[14px] font-semibold text-foreground truncate leading-tight">
+                                    {otherProfile?.full_name || "Contact"}
+                                </p>
+                                <p className={`text-[11px] font-medium ${otherProfile?.is_online ? "text-emerald-500" : "text-foreground/30"}`}>
+                                    {otherProfile?.is_online ? "Active now" : "Offline"}
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 text-foreground/40">
-                        <button className="p-2 hover:bg-foreground/10 hover:text-foreground rounded-full transition-colors" onClick={(e) => { e.stopPropagation(); /* TODO: Video Call */ }}>
-                            <Video size={20} />
+                    <div className="flex items-center gap-1 text-foreground/40 shrink-0">
+                        <button className="p-2 rounded-xl hover:bg-foreground/5 hover:text-foreground transition-all" onClick={(e) => e.stopPropagation()}>
+                            <Video size={18} />
                         </button>
-                        <button className="p-2 hover:bg-foreground/10 hover:text-foreground rounded-full transition-colors" onClick={(e) => { e.stopPropagation(); /* TODO: Phone Call */ }}>
-                            <Phone size={19} />
+                        <button className="p-2 rounded-xl hover:bg-foreground/5 hover:text-foreground transition-all" onClick={(e) => e.stopPropagation()}>
+                            <Phone size={17} />
                         </button>
-                        <button className="p-2 hover:bg-foreground/10 hover:text-foreground rounded-full transition-colors">
-                            <MoreHorizontal size={20} />
+                        <button className="p-2 rounded-xl hover:bg-foreground/5 hover:text-foreground transition-all">
+                            <MoreHorizontal size={18} />
                         </button>
                     </div>
                 </div>
 
                 {showContactInfo ? (
-                    /* ── Contact Info View ───────────────────────────────────────── */
-                    <div className="flex-1 overflow-y-auto w-full flex flex-col items-center py-10 px-6 bg-[#F8F9FA] dark:bg-foreground/5">
-                        <div className="w-full max-w-sm flex flex-col items-center">
-                            <div className="w-32 h-32 rounded-full overflow-hidden bg-foreground/10 border-4 border-background shadow-xl mb-4">
+                    /* ── Contact Info ───────────────────────────────────────── */
+                    <div className="flex-1 overflow-y-auto flex flex-col items-center py-10 px-6 bg-zinc-50 dark:bg-zinc-950">
+                        <div className="w-full max-w-xs flex flex-col items-center gap-4">
+                            <div className="w-24 h-24 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-xl">
                                 {otherProfile?.avatar_url ? (
-                                    <img src={otherProfile.avatar_url} alt={otherProfile.full_name} className="w-full h-full object-cover" />
+                                    <img src={otherProfile.avatar_url} alt="" className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center font-black text-foreground/30 text-5xl">
+                                    <div className="w-full h-full flex items-center justify-center font-black text-zinc-400 text-4xl">
                                         {otherProfile?.full_name?.charAt(0) ?? "?"}
                                     </div>
                                 )}
                             </div>
-                            <h2 className="text-2xl font-black text-foreground">{otherProfile?.full_name || "Unknown Contact"}</h2>
-                            <p className="text-foreground/50 font-bold mb-6">{otherProfile?.email || "No email available"}</p>
-
-                            <div className="flex items-center gap-4 mb-8 w-full justify-center">
-                                <button
-                                    onClick={() => setShowContactInfo(false)}
-                                    className="flex flex-col items-center gap-1.5 p-3 rounded-2xl hover:bg-foreground/5 text-foreground transition-all min-w-[80px]"
-                                >
-                                    <MessageSquare size={20} className="text-emerald-500" />
-                                    <span className="text-[12px] font-bold">Message</span>
-                                </button>
-                                <button className="flex flex-col items-center gap-1.5 p-3 rounded-2xl hover:bg-foreground/5 text-foreground transition-all min-w-[80px]">
-                                    <Phone size={20} className="text-emerald-500" />
-                                    <span className="text-[12px] font-bold">Audio</span>
-                                </button>
-                                <button className="flex flex-col items-center gap-1.5 p-3 rounded-2xl hover:bg-foreground/5 text-foreground transition-all min-w-[80px]">
-                                    <Video size={20} className="text-emerald-500" />
-                                    <span className="text-[12px] font-bold">Video</span>
-                                </button>
+                            <div className="text-center">
+                                <h2 className="text-xl font-bold text-foreground">{otherProfile?.full_name}</h2>
+                                <p className="text-[13px] text-foreground/40 mt-0.5">{otherProfile?.email || ""}</p>
                             </div>
 
-                            <div className="w-full bg-background rounded-2xl p-4 border border-border shadow-sm mb-4">
-                                <h4 className="text-[12px] font-black text-foreground/40 uppercase tracking-wilder mb-3">About</h4>
-                                <p className="text-[14px] font-semibold text-foreground">Available</p>
+                            <div className="flex gap-3">
+                                {[
+                                    { icon: MessageSquare, label: "Message", action: () => setShowContactInfo(false) },
+                                    { icon: Phone, label: "Call", action: () => { } },
+                                    { icon: Video, label: "Video", action: () => { } },
+                                ].map(({ icon: Icon, label, action }) => (
+                                    <button key={label} onClick={action}
+                                        className="flex flex-col items-center gap-1.5 px-5 py-3 rounded-2xl bg-background border border-border hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all">
+                                        <Icon size={18} className="text-emerald-500" />
+                                        <span className="text-[11px] font-semibold text-foreground/60">{label}</span>
+                                    </button>
+                                ))}
                             </div>
 
-                            <div className="w-full bg-background rounded-2xl p-2 border border-border shadow-sm flex flex-col">
-                                <button className="flex items-center justify-between p-3 rounded-xl hover:bg-foreground/5 transition-colors text-red-500 group">
-                                    <span className="text-[14px] font-bold">Block Contact</span>
-                                    <X size={16} className="opacity-50 group-hover:opacity-100" />
-                                </button>
-                                <button className="flex items-center justify-between p-3 rounded-xl hover:bg-foreground/5 transition-colors text-red-500 group">
-                                    <span className="text-[14px] font-bold">Report Contact</span>
-                                    <X size={16} className="opacity-50 group-hover:opacity-100" />
-                                </button>
-                                <button className="flex items-center justify-between p-3 rounded-xl hover:bg-foreground/5 transition-colors text-red-500 group">
-                                    <span className="text-[14px] font-bold">Delete Chat</span>
-                                    <Trash2 size={16} className="opacity-50 group-hover:opacity-100" />
-                                </button>
+                            <div className="w-full rounded-2xl bg-background border border-border divide-y divide-border overflow-hidden">
+                                {["Block Contact", "Report", "Delete Chat"].map((label) => (
+                                    <button key={label}
+                                        className="w-full px-4 py-3 text-left text-[13px] font-medium text-red-500 hover:bg-red-500/5 transition-colors flex items-center justify-between">
+                                        {label}
+                                        <Trash2 size={14} className="opacity-40" />
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>
                 ) : (
                     <>
-                        {/* ── Messages ───────────────────────────────────────────────── */}
+                        {/* ── Messages Area ───────────────────────────────────── */}
                         <div
                             ref={scrollRef}
-                            className="flex-1 overflow-y-auto px-6 py-6 no-scrollbar"
+                            onScroll={handleScroll}
+                            className="flex-1 overflow-y-auto px-5 pt-4 pb-2"
+                            style={{ scrollbarWidth: "none" }}
                         >
                             {loadingMessages ? (
                                 <div className="flex items-center justify-center h-full">
-                                    <Loader2 size={24} className="animate-spin text-[#BBBBBB]" />
+                                    <Loader2 size={22} className="animate-spin text-foreground/20" />
                                 </div>
                             ) : messages.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-[#BBBBBB] gap-3">
-                                    <div className="w-14 h-14 rounded-2xl bg-[#F0FDF4] flex items-center justify-center">
-                                        <Send size={22} className="text-[#22C55E]" />
+                                <div className="flex flex-col items-center justify-center h-full gap-3 opacity-40">
+                                    <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                                        <Send size={20} className="text-emerald-500" />
                                     </div>
-                                    <p className="text-[14px] font-bold">
-                                        Say hi to {otherProfile?.full_name?.split(" ")[0] ?? "them"}!
-                                    </p>
+                                    <p className="text-[13px] font-medium">Say hi to {otherProfile?.full_name?.split(" ")[0]}!</p>
                                 </div>
                             ) : (
-                                messages.map((msg) => (
-                                    <div
-                                        key={msg.id}
-                                        className="group relative"
-                                    >
-                                        <MessageBubble msg={msg} myId={userId} allMessages={messages} />
-
-                                        {/* Reply button on hover */}
-                                        <button
-                                            onClick={() => setReplyTo(msg)}
-                                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-white/80 shadow-sm text-[#888] hover:text-black"
-                                            title="Reply"
-                                        >
-                                            <CornerUpLeft size={13} />
-                                        </button>
-                                    </div>
-                                ))
+                                <div className="flex flex-col">
+                                    {grouped.map((item) =>
+                                        item.type === "date"
+                                            ? <DateDivider key={item.key} label={item.label} />
+                                            : <Bubble key={item.key} msg={item.msg} myId={userId}
+                                                allMessages={messages} onReply={setReplyTo} />
+                                    )}
+                                </div>
                             )}
                         </div>
 
-                        {/* ── Typing Indicator ───────────────────────────────────────── */}
-                        <TypingDots names={typingNames} />
-
-                        {/* ── Reply Bar ──────────────────────────────────────────────── */}
-                        {replyTo && (
-                            <ReplyBar replyTo={replyTo} onCancel={() => setReplyTo(null)} />
+                        {/* Scroll-to-bottom pill */}
+                        {showScrollBtn && (
+                            <button
+                                onClick={() => scrollToBottom(true)}
+                                className="absolute bottom-24 right-5 p-2 bg-background border border-border rounded-full shadow-lg text-foreground/60 hover:text-foreground transition-all z-20"
+                            >
+                                <ChevronDown size={16} />
+                            </button>
                         )}
 
-                        {/* ── Input ──────────────────────────────────────────────────── */}
-                        <div className="p-5 pt-3 border-t border-[#F5F5F5] dark:border-foreground/10 shrink-0">
-                            <div className="relative group">
-                                <div className="bg-[#F8F9FA] dark:bg-foreground/5 rounded-[22px] p-2 flex items-center gap-2 border border-transparent group-focus-within:border-foreground/10 transition-all shadow-sm">
-                                    {/* Text input */}
-                                    <input
-                                        id="chat-message-input"
-                                        type="text"
-                                        value={text}
-                                        onChange={(e) => {
-                                            setText(e.target.value);
-                                            sendTyping();
-                                        }}
-                                        onKeyDown={handleKeyDown}
-                                        placeholder="Type your message..."
-                                        className="flex-1 bg-transparent border-none outline-none py-3 px-4 text-[14px] font-semibold text-foreground placeholder:text-foreground/40"
-                                    />
+                        {/* ── Typing ──────────────────────────────────────────── */}
+                        <TypingIndicator names={typingUsers.map((u) => u.full_name?.split(" ")[0] ?? "Someone")} />
 
-                                    {/* Right icons */}
-                                    <div className="flex items-center gap-1 pr-1">
-                                        <button className="p-2 text-foreground/40 hover:text-foreground hover:bg-foreground/5 rounded-full transition-all">
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                                        </button>
-                                        <button className="p-2 text-foreground/40 hover:text-foreground hover:bg-foreground/5 rounded-full transition-all">
-                                            <Smile size={18} />
-                                        </button>
-                                        <button className="p-2 text-foreground/40 hover:text-foreground hover:bg-foreground/5 rounded-full transition-all">
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>
-                                        </button>
-                                        <button
-                                            id="chat-attach-btn"
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="p-2 text-foreground/40 hover:text-foreground hover:bg-foreground/5 rounded-full transition-all"
-                                            title="Attach file"
-                                        >
-                                            <Paperclip size={18} />
-                                        </button>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            className="hidden"
-                                            onChange={handleFileSelect}
-                                        />
-                                        <button
-                                            id="chat-send-btn"
-                                            onClick={handleSend}
-                                            disabled={!text.trim() || sending}
-                                            className="w-11 h-11 bg-black dark:bg-white text-white dark:text-black rounded-[16px] ml-1 flex items-center justify-center hover:opacity-90 active:scale-95 transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-                                        >
-                                            {sending ? (
-                                                <Loader2 size={17} className="animate-spin" />
-                                            ) : (
-                                                <Send size={17} />
-                                            )}
-                                        </button>
+                        {/* ── Reply Bar ───────────────────────────────────────── */}
+                        {replyTo && (
+                            <div className="mx-4 mb-2 px-4 py-2.5 bg-zinc-50 dark:bg-zinc-900 border border-border rounded-2xl flex items-center gap-3">
+                                <div className="w-0.5 h-8 bg-emerald-500 rounded-full shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-semibold text-emerald-500 uppercase tracking-wider mb-0.5">Replying</p>
+                                    <p className="text-[12px] text-foreground/60 truncate">{replyTo._decryptedText || "📎 Media"}</p>
+                                </div>
+                                <button onClick={() => setReplyTo(null)} className="p-1 text-foreground/30 hover:text-foreground rounded-lg transition-colors">
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        )}
+
+                        {/* ── Emoji Picker ────────────────────────────────────── */}
+                        {showEmojiPicker && (
+                            <div ref={emojiPickerRef}
+                                className="absolute bottom-[76px] right-4 z-50 shadow-2xl rounded-2xl overflow-hidden border border-border">
+                                {emojiData ? (
+                                    <EmojiPicker
+                                        data={emojiData} onEmojiSelect={handleEmojiSelect}
+                                        theme="auto" previewPosition="none" skinTonePosition="none"
+                                        maxFrequentRows={2} perLine={8} emojiSize={20} emojiButtonSize={30}
+                                    />
+                                ) : (
+                                    <div className="p-5 bg-background">
+                                        <Loader2 size={18} className="animate-spin text-foreground/30" />
                                     </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* ── Input Bar ───────────────────────────────────────── */}
+                        <div className="px-4 pb-4 pt-2 shrink-0">
+                            <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 rounded-2xl px-3 py-2 border border-transparent focus-within:border-emerald-500/30 focus-within:bg-background transition-all">
+                                <input
+                                    ref={inputRef}
+                                    id="chat-message-input"
+                                    type="text"
+                                    value={text}
+                                    onChange={(e) => { setText(e.target.value); sendTyping(); }}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="Message..."
+                                    className="flex-1 bg-transparent border-none outline-none py-2 px-2 text-[14px] font-medium text-foreground placeholder:text-foreground/30"
+                                />
+
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                    <button
+                                        id="chat-emoji-btn"
+                                        onClick={() => setShowEmojiPicker((p) => !p)}
+                                        className={`p-2 rounded-xl transition-all ${showEmojiPicker ? "text-emerald-500 bg-emerald-500/10" : "text-foreground/30 hover:text-foreground hover:bg-foreground/5"}`}
+                                    >
+                                        <Smile size={18} />
+                                    </button>
+                                    <button
+                                        id="chat-attach-btn"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="p-2 rounded-xl text-foreground/30 hover:text-foreground hover:bg-foreground/5 transition-all"
+                                    >
+                                        <Paperclip size={17} />
+                                    </button>
+                                    <input ref={fileInputRef} type="file" className="hidden"
+                                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip"
+                                        onChange={handleFileSelect} />
+
+                                    <button
+                                        id="chat-send-btn"
+                                        onClick={handleSend}
+                                        disabled={!text.trim() || sending}
+                                        className={`ml-1 w-9 h-9 rounded-xl flex items-center justify-center transition-all
+                                            ${text.trim() && !sending
+                                                ? "bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm shadow-emerald-500/30 active:scale-95"
+                                                : "bg-foreground/5 text-foreground/20 cursor-not-allowed"
+                                            }`}
+                                    >
+                                        {sending
+                                            ? <Loader2 size={15} className="animate-spin" />
+                                            : <Send size={15} className={text.trim() ? "" : ""} />
+                                        }
+                                    </button>
                                 </div>
                             </div>
                         </div>

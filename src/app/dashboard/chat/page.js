@@ -6,8 +6,8 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import ButtonSpinner from "@/components/ui/ButtonSpinner";
 import { useCrypto } from "@/providers/CryptoProvider";
 import { usePresence } from "@/hooks/usePresence";
+import { MessageSquare, PlaySquare, UserPlus } from "lucide-react";
 
-// Dashboard components
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import ConversationList from "@/components/dashboard/ConversationList";
 import ChatWindow from "@/components/dashboard/ChatWindow";
@@ -17,17 +17,38 @@ export default function ChatDashboard() {
   const router = useRouter();
   const { userId } = useCrypto();
 
-  // Activate global presence tracking — writes is_online to profiles
   usePresence(userId);
 
-  const [activeTab, setActiveTab] = useState("chat"); // 'chat' | 'media'
-
-  // Selected conversation — { id, otherProfile }
+  const [activeTab, setActiveTab] = useState("chat");
   const [selectedConv, setSelectedConv] = useState(null);
+  const [mobileView, setMobileView] = useState("list"); // 'list' | 'chat'
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Resizable sidebar
-  const [sidebarWidth, setSidebarWidth] = useState(380);
+  // Track mobile breakpoint
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  // Resizable sidebar width (desktop only)
+  const [sidebarWidth, setSidebarWidth] = useState(320);
   const isResizing = useRef(false);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isResizing.current) return;
+    const newWidth = e.clientX - 72;
+    if (newWidth >= 240 && newWidth <= 480) setSidebarWidth(newWidth);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    isResizing.current = false;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", stopResizing);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  }, [handleMouseMove]);
 
   const startResizing = useCallback(() => {
     isResizing.current = true;
@@ -35,23 +56,7 @@ export default function ChatDashboard() {
     document.addEventListener("mouseup", stopResizing);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
-  }, []);
-
-  const stopResizing = useCallback(() => {
-    isResizing.current = false;
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", stopResizing);
-    document.body.style.cursor = "default";
-    document.body.style.userSelect = "auto";
-  }, []);
-
-  const handleMouseMove = useCallback((e) => {
-    if (!isResizing.current) return;
-    const newWidth = e.clientX - 84;
-    if (newWidth >= 280 && newWidth <= 500) {
-      setSidebarWidth(newWidth);
-    }
-  }, []);
+  }, [handleMouseMove, stopResizing]);
 
   useEffect(() => {
     return () => {
@@ -61,10 +66,13 @@ export default function ChatDashboard() {
   }, [handleMouseMove, stopResizing]);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/sign-in");
-    }
+    if (!loading && !user) router.push("/sign-in");
   }, [user, loading, router]);
+
+  const handleSelectConversation = useCallback((conv) => {
+    setSelectedConv(conv);
+    setMobileView("chat");
+  }, []);
 
   if (loading || !user) {
     return (
@@ -74,32 +82,81 @@ export default function ChatDashboard() {
     );
   }
 
+  // ── Visibility helpers ────────────────────────────────────────────────────
+  // Desktop: both panels always visible
+  // Mobile:  show only one panel based on mobileView
+  const showList = !isMobile || mobileView === "list";
+  const showChat = !isMobile || mobileView === "chat";
+
   return (
-    <main className="flex h-screen bg-background overflow-hidden text-foreground antialiased font-sans">
-      {/* Icon Sidebar */}
+    <main className="flex h-dvh bg-background text-foreground antialiased font-sans overflow-hidden">
+      {/* Icon Sidebar — hidden on mobile via DashboardSidebar itself */}
       <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <ConversationList
-        activeTab={activeTab}
-        width={sidebarWidth}
-        selectedConvId={selectedConv?.id ?? null}
-        onSelectConversation={setSelectedConv}
-        onTabChange={setActiveTab}
-      />
+      {/* ── Conversation List Panel ─────────────────────────────────────── */}
+      {showList && (
+        <div
+          style={{ width: isMobile ? "100%" : sidebarWidth }}
+          className="h-full shrink-0 flex flex-col border-r border-border bg-background"
+        >
+          {/* pb-14 clears mobile bottom nav */}
+          <div className="flex flex-col h-full pb-14 md:pb-0">
+            <ConversationList
+              activeTab={activeTab}
+              selectedConvId={selectedConv?.id ?? null}
+              onSelectConversation={handleSelectConversation}
+              onTabChange={setActiveTab}
+            />
+          </div>
+        </div>
+      )}
 
-      {/* Resize Handle */}
-      <div
-        onMouseDown={startResizing}
-        className="w-1.5 h-full cursor-col-resize hover:bg-foreground/10 active:bg-foreground/20 transition-colors z-50 shrink-0"
-      />
+      {/* Desktop resize handle */}
+      {!isMobile && (
+        <div
+          onMouseDown={startResizing}
+          className="w-0.5 h-full cursor-col-resize hover:bg-emerald-500/40 active:bg-emerald-500/60 transition-colors shrink-0"
+        />
+      )}
 
-      {/* Main Chat Window */}
-      <ChatWindow
-        conversationId={selectedConv?.id ?? null}
-        otherProfile={selectedConv?.otherProfile ?? null}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
+      {/* ── Chat Window Panel ───────────────────────────────────────────── */}
+      {showChat && (
+        <div className="flex-1 h-full min-w-0 flex flex-col">
+          <ChatWindow
+            conversationId={selectedConv?.id ?? null}
+            otherProfile={selectedConv?.otherProfile ?? null}
+            onBack={() => setMobileView("list")}
+          />
+        </div>
+      )}
+
+      {/* ── Mobile Bottom Navigation ────────────────────────────────────── */}
+      {isMobile && (
+        <nav className="fixed bottom-0 left-0 right-0 h-14 bg-background/95 backdrop-blur-md border-t border-border flex items-center justify-around z-50">
+          {[
+            { id: "chat", icon: MessageSquare, label: "Chats" },
+            { id: "media", icon: PlaySquare, label: "Media" },
+            { id: "contacts", icon: UserPlus, label: "Contacts" },
+          ].map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              onClick={() => {
+                setActiveTab(id);
+                setMobileView("list");
+              }}
+              className={`flex flex-col items-center gap-1 px-6 py-1.5 rounded-xl transition-all
+                ${
+                  activeTab === id
+                    ? "text-emerald-500"
+                    : "text-foreground/30 hover:text-foreground/60"
+                }`}
+            >
+              <Icon size={20} strokeWidth={activeTab === id ? 2.5 : 2} />
+              <span className="text-[10px] font-semibold">{label}</span>
+            </button>
+          ))}
+        </nav>
+      )}
     </main>
   );
 }
