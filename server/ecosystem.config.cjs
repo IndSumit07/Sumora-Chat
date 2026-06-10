@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'chatapp-server',
+      name: 'sumora-chat-api',
       script: './server.js',
       instances: 'max',
       exec_mode: 'cluster',
@@ -12,11 +12,11 @@ module.exports = {
       restart_delay: 5000,
       env_production: {
         NODE_ENV: 'production',
-        PORT: 5000,
+        PORT: 3001,
       },
       env_development: {
         NODE_ENV: 'development',
-        PORT: 5000,
+        PORT: 3001,
       },
       error_file: './logs/pm2-error.log',
       out_file: './logs/pm2-out.log',
