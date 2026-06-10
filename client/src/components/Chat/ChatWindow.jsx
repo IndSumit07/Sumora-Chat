@@ -42,7 +42,7 @@ export default function ChatWindow({ conversationId }) {
   // Load messages into store when data arrives (replaces removed onSuccess)
   useEffect(() => {
     if (msgData && isFirstLoad.current) {
-      const msgs = (msgData?.data?.messages ?? []).reverse();
+      const msgs = [...(msgData?.data?.messages ?? [])].reverse();
       setMessages(conversationId, msgs, msgData.meta?.cursor, msgData.meta?.hasMore);
       isFirstLoad.current = false;
       setTimeout(() => scrollToBottom('instant'), 50);
@@ -83,7 +83,7 @@ export default function ChatWindow({ conversationId }) {
     const params = { limit: 30, cursor };
     const response = await messageApi.getMessages(conversationId, params);
     const data = response.data;
-    const older = (data?.data?.messages ?? []).reverse();
+    const older = [...(data?.data?.messages ?? [])].reverse();
     setMessages(conversationId, [...older, ...roomMessages], data.meta?.cursor, data.meta?.hasMore);
   }, [cursors, conversationId, roomMessages, setMessages]);
 

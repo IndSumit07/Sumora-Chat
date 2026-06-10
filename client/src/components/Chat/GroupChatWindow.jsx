@@ -40,7 +40,7 @@ export default function GroupChatWindow({ groupId }) {
   // Load messages into store when data arrives (replaces removed onSuccess)
   useEffect(() => {
     if (msgData && isFirstLoad.current) {
-      const msgs = (msgData?.data?.messages ?? []).reverse();
+      const msgs = [...(msgData?.data?.messages ?? [])].reverse();
       setMessages(groupId, msgs, msgData.meta?.cursor, msgData.meta?.hasMore);
       isFirstLoad.current = false;
       setTimeout(() => scrollToBottom('instant'), 50);
@@ -78,7 +78,7 @@ export default function GroupChatWindow({ groupId }) {
     const params = { limit: 30, cursor };
     const response = await groupApi.getMessages(groupId, params);
     const data = response.data;
-    const older = (data?.data?.messages ?? []).reverse();
+    const older = [...(data?.data?.messages ?? [])].reverse();
     setMessages(groupId, [...older, ...roomMessages], data.meta?.cursor, data.meta?.hasMore);
   }, [cursors, groupId, roomMessages, setMessages]);
 
