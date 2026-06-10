@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useChatStore } from '../store/chatStore.js';
 import messageApi from '../api/message.api.js';
@@ -27,13 +28,20 @@ export const useMessages = ({ conversationId, groupId, limit = 30 }) => {
     getNextPageParam: (lastPage) => lastPage.meta?.cursor || null,
     enabled: !!roomId,
     staleTime: 0,
-    onSuccess: (data) => {
-      // Flatten pages into store
-      const allMessages = data.pages.flatMap((p) => p.data.messages).reverse();
+  });
+
+  const { data } = query;
+
+  // React Query v5 compatibility: onSuccess was removed from useInfiniteQuery,
+  // so we use a useEffect to listen for data changes and load them into the store
+  useEffect(() => {
+    if (data) {
+      const allMessages = data.pages.flatMap((p) => p.data?.messages || []).reverse();
       const lastPage = data.pages[data.pages.length - 1];
       chatStore.setMessages(roomId, allMessages, lastPage.meta?.cursor, lastPage.meta?.hasMore);
-    },
-  });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, roomId]);
 
   const sendMessageMutation = useMutation({
     mutationFn: (messageData) => {

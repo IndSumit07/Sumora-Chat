@@ -28,8 +28,8 @@ export default function ChatWindow({ conversationId }) {
 
   // Fetch initial messages
   // NOTE: onSuccess was removed in React Query v5 — use useEffect below instead
-  const { data: msgData, isLoading: messagesLoading, isFetchingNextPage, fetchNextPage } = useQuery({
-    queryKey: ['messages', conversationId],
+  const { data: msgData, isLoading: messagesLoading } = useQuery({
+    queryKey: ['chatWindowMessages', conversationId],
     queryFn: async ({ pageParam = null }) => {
       const params = { limit: 30 };
       if (pageParam) params.cursor = pageParam;
@@ -79,9 +79,13 @@ export default function ChatWindow({ conversationId }) {
 
   const loadMoreMessages = useCallback(async () => {
     const cursor = cursors[conversationId];
-    if (!cursor || isFetchingNextPage) return;
-    await fetchNextPage({ pageParam: cursor });
-  }, [cursors, conversationId, isFetchingNextPage, fetchNextPage]);
+    if (!cursor) return;
+    const params = { limit: 30, cursor };
+    const response = await messageApi.getMessages(conversationId, params);
+    const data = response.data;
+    const older = (data?.data?.messages ?? []).reverse();
+    setMessages(conversationId, [...older, ...roomMessages], data.meta?.cursor, data.meta?.hasMore);
+  }, [cursors, conversationId, roomMessages, setMessages]);
 
   if (convLoading || messagesLoading) {
     return (
@@ -109,7 +113,7 @@ export default function ChatWindow({ conversationId }) {
         conversationId={conversationId}
         hasMore={hasMore[conversationId]}
         onLoadMore={loadMoreMessages}
-        isLoadingMore={isFetchingNextPage}
+        isLoadingMore={false}
         bottomRef={bottomRef}
         otherUser={otherUser}
       />
