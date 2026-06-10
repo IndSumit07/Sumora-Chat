@@ -41,8 +41,7 @@ export const register = asyncHandler(async (req, res) => {
 
   // Check uniqueness
   const existing = await User.findOne({
-    $or: [{ email }, { username }],
-    isDeleted: { $ne: true },
+    $or: [{ email }, { username }]
   });
 
   if (existing) {
@@ -96,8 +95,7 @@ export const verifyRegister = asyncHandler(async (req, res) => {
 
   // Double-check uniqueness (race condition protection)
   const existing = await User.findOne({
-    $or: [{ email: pending.email }, { username: pending.username }],
-    isDeleted: { $ne: true },
+    $or: [{ email: pending.email }, { username: pending.username }]
   });
   if (existing) {
     throw new AppError('Account already exists', 409, 'CONFLICT');
