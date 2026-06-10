@@ -8,7 +8,7 @@ export const useOnlineStatus = (userId) => {
 export const useOnlineStatusMap = (userIds) => {
   const onlineUsers = useUIStore((state) => state.onlineUsers);
   const statusMap = {};
-  for (const uid of userIds) {
+  for (const uid of (userIds ?? [])) {
     statusMap[uid] = onlineUsers[uid] === true;
   }
   return statusMap;
