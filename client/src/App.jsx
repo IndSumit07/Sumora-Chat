@@ -1,20 +1,51 @@
 import { Toaster } from 'react-hot-toast';
 import AppRouter from './routes/AppRouter.jsx';
 import { useAuthStore } from './store/authStore.js';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { initSocketListeners } from './socket/socketClient.js';
 import { useSocketStore } from './store/socketStore.js';
 import ModalRoot from './components/Modals/ModalRoot.jsx';
+import authApi from './api/auth.api.js';
+import { PageLoader } from './components/ui/Spinner.jsx';
 
 function App() {
-  const { user, accessToken } = useAuthStore();
+  const { user, accessToken, setAccessToken, logout } = useAuthStore();
   const { socket } = useSocketStore();
+  // Track whether the initial session restoration attempt has completed
+  const [sessionRestored, setSessionRestored] = useState(false);
+
+  // On mount: if user exists in storage but no access token, try to restore session
+  // via the httpOnly refresh token cookie
+  useEffect(() => {
+    const restoreSession = async () => {
+      if (user && !accessToken) {
+        try {
+          const response = await authApi.refresh();
+          const { accessToken: newToken } = response.data.data;
+          setAccessToken(newToken);
+        } catch {
+          // Refresh token is expired or invalid — log the user out cleanly
+          logout();
+        }
+      }
+      setSessionRestored(true);
+    };
+
+    restoreSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   useEffect(() => {
     if (user && accessToken && socket) {
       initSocketListeners(socket);
     }
   }, [user, accessToken, socket]);
+
+  // Don't render routes until we've attempted session restoration.
+  // This prevents a flash of the login page for authenticated users.
+  if (!sessionRestored) {
+    return <PageLoader />;
+  }
 
   return (
     <>
@@ -48,3 +79,4 @@ function App() {
 }
 
 export default App;
+

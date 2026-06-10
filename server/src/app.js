@@ -80,10 +80,18 @@ app.use(
     origin: (origin, callback) => {
       const allowed = [
         process.env.FRONTEND_URL,
+        // Hardcoded fallback origins for robustness
+        'https://sumora-chat-qzia.vercel.app',
         'http://localhost:5173',
         'http://localhost:3000',
-      ];
-      if (!origin || allowed.includes(origin)) return callback(null, true);
+      ].filter(Boolean); // Remove undefined/null if env var is not set
+
+      // Allow requests with no origin (mobile apps, Postman, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      if (allowed.includes(origin)) return callback(null, true);
+
+      logger.warn(`CORS blocked request from origin: ${origin}`);
       callback(new Error(`CORS policy violation: ${origin}`));
     },
     credentials: true,

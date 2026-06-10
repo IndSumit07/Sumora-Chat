@@ -133,11 +133,13 @@ export const verifyResetToken = (token) => {
  * Set secure httpOnly cookie for refresh token
  */
 export const setRefreshCookie = (res, refreshToken) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    domain: process.env.COOKIE_DOMAIN || undefined,
+    secure: isProduction,
+    // 'none' is required for cross-origin cookie sharing (Vercel frontend <-> EC2 backend)
+    // 'none' requires secure: true, so in dev we fall back to 'lax'
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: REFRESH_TOKEN_TTL_SECONDS * 1000,
     path: '/api/auth',
   });
@@ -147,11 +149,11 @@ export const setRefreshCookie = (res, refreshToken) => {
  * Clear refresh token cookie
  */
 export const clearRefreshCookie = (res) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   res.clearCookie('refreshToken', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    domain: process.env.COOKIE_DOMAIN || undefined,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/api/auth',
   });
 };

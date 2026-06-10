@@ -124,9 +124,7 @@ const userSchema = new mongoose.Schema(
 );
 
 // Indexes
-userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ username: 1 }, { unique: true });
-userSchema.index({ googleId: 1 }, { sparse: true });
+// Explicit indexes for fields without unique/sparse in definition
 userSchema.index({ isDeleted: 1 });
 userSchema.index({ friends: 1 });
 
