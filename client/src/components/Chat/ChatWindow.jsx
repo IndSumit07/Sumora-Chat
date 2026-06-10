@@ -27,7 +27,8 @@ export default function ChatWindow({ conversationId }) {
   });
 
   // Fetch initial messages
-  const { isLoading: messagesLoading, isFetchingNextPage, fetchNextPage } = useQuery({
+  // NOTE: onSuccess was removed in React Query v5 — use useEffect below instead
+  const { data: msgData, isLoading: messagesLoading, isFetchingNextPage, fetchNextPage } = useQuery({
     queryKey: ['messages', conversationId],
     queryFn: async ({ pageParam = null }) => {
       const params = { limit: 30 };
@@ -35,17 +36,24 @@ export default function ChatWindow({ conversationId }) {
       const response = await messageApi.getMessages(conversationId, params);
       return response.data;
     },
-    onSuccess: (data) => {
-      if (isFirstLoad.current) {
-        const msgs = (data?.data?.messages || []).reverse();
-        setMessages(conversationId, msgs, data.meta?.cursor, data.meta?.hasMore);
-        isFirstLoad.current = false;
-        // Scroll to bottom on initial load
-        setTimeout(() => scrollToBottom('instant'), 50);
-      }
-    },
     staleTime: 0,
   });
+
+  // Load messages into store when data arrives (replaces removed onSuccess)
+  useEffect(() => {
+    if (msgData && isFirstLoad.current) {
+      const msgs = (msgData?.data?.messages ?? []).reverse();
+      setMessages(conversationId, msgs, msgData.meta?.cursor, msgData.meta?.hasMore);
+      isFirstLoad.current = false;
+      setTimeout(() => scrollToBottom('instant'), 50);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgData, conversationId]);
+
+  // Reset first-load flag when conversation changes
+  useEffect(() => {
+    isFirstLoad.current = true;
+  }, [conversationId]);
 
   const scrollToBottom = useCallback((behavior = 'smooth') => {
     bottomRef.current?.scrollIntoView({ behavior });

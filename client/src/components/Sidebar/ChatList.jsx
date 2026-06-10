@@ -26,7 +26,9 @@ export default function ChatList() {
            c.otherUser?.username?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const onlineStatuses = useOnlineStatusMap(filteredConversations.map(c => c.otherUser?._id));
+  const onlineStatuses = useOnlineStatusMap(
+    filteredConversations.map(c => c.otherUser?._id).filter(Boolean)
+  );
 
   const renderMessageContent = (msg, isTyping) => {
     if (isTyping) {
