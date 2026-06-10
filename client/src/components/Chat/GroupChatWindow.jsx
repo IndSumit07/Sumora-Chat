@@ -25,7 +25,8 @@ export default function GroupChatWindow({ groupId }) {
   });
 
   // Fetch initial group messages
-  const { isLoading: messagesLoading, isFetchingNextPage, fetchNextPage } = useQuery({
+  // NOTE: onSuccess was removed in React Query v5 — use useEffect below
+  const { data: msgData, isLoading: messagesLoading } = useQuery({
     queryKey: ['groupMessages', groupId],
     queryFn: async ({ pageParam = null }) => {
       const params = { limit: 30 };
@@ -33,16 +34,24 @@ export default function GroupChatWindow({ groupId }) {
       const response = await groupApi.getMessages(groupId, params);
       return response.data;
     },
-    onSuccess: (data) => {
-      if (isFirstLoad.current) {
-        const msgs = (data?.data?.messages || []).reverse();
-        setMessages(groupId, msgs, data.meta?.cursor, data.meta?.hasMore);
-        isFirstLoad.current = false;
-        setTimeout(() => scrollToBottom('instant'), 50);
-      }
-    },
     staleTime: 0,
   });
+
+  // Load messages into store when data arrives (replaces removed onSuccess)
+  useEffect(() => {
+    if (msgData && isFirstLoad.current) {
+      const msgs = (msgData?.data?.messages ?? []).reverse();
+      setMessages(groupId, msgs, msgData.meta?.cursor, msgData.meta?.hasMore);
+      isFirstLoad.current = false;
+      setTimeout(() => scrollToBottom('instant'), 50);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgData, groupId]);
+
+  // Reset first-load flag when group changes
+  useEffect(() => {
+    isFirstLoad.current = true;
+  }, [groupId]);
 
   const scrollToBottom = useCallback((behavior = 'smooth') => {
     bottomRef.current?.scrollIntoView({ behavior });
@@ -64,9 +73,14 @@ export default function GroupChatWindow({ groupId }) {
 
   const loadMoreMessages = useCallback(async () => {
     const cursor = cursors[groupId];
-    if (!cursor || isFetchingNextPage) return;
-    await fetchNextPage({ pageParam: cursor });
-  }, [cursors, groupId, isFetchingNextPage, fetchNextPage]);
+    if (!cursor) return;
+    // Fetch next page manually
+    const params = { limit: 30, cursor };
+    const response = await groupApi.getMessages(groupId, params);
+    const data = response.data;
+    const older = (data?.data?.messages ?? []).reverse();
+    setMessages(groupId, [...older, ...roomMessages], data.meta?.cursor, data.meta?.hasMore);
+  }, [cursors, groupId, roomMessages, setMessages]);
 
   if (groupLoading || messagesLoading) {
     return (
@@ -92,7 +106,7 @@ export default function GroupChatWindow({ groupId }) {
         groupId={groupId}
         hasMore={hasMore[groupId]}
         onLoadMore={loadMoreMessages}
-        isLoadingMore={isFetchingNextPage}
+        isLoadingMore={false}
         bottomRef={bottomRef}
         isGroup={true}
       />
