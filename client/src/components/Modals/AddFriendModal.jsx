@@ -27,7 +27,7 @@ export default function AddFriendModal({ isOpen, onClose }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!username.trim()) return;
-    sendRequestMutation.mutate({ username: username.trim() });
+    sendRequestMutation.mutate({ receiverUsername: username.trim() });
   };
 
   return (

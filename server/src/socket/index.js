@@ -16,10 +16,17 @@ let io = null;
 export const initSocket = (httpServer) => {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+      origin: [
+        process.env.FRONTEND_URL,
+        'https://sumora-chat-qzia.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000',
+      ].filter(Boolean),
       credentials: true,
       methods: ['GET', 'POST'],
     },
+    // Start with polling so the connection works even if Nginx doesn't proxy WebSocket,
+    // then it will automatically try to upgrade to WebSocket
     transports: ['websocket', 'polling'],
     pingTimeout: 60000,
     pingInterval: 25000,
