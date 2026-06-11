@@ -58,7 +58,7 @@ export default function Sidebar() {
               name={user?.fullName} 
               size="md" 
               className="cursor-pointer"
-              onClick={() => openModal(MODAL_TYPES.PROFILE)}
+              onClick={() => navigate('/profile')}
             />
             <div className="min-w-0">
               <h2 className="text-base font-semibold text-text-primary truncate">{user?.fullName}</h2>

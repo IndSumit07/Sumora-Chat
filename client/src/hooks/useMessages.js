@@ -25,22 +25,33 @@ export const useMessages = ({ conversationId, groupId, limit = 30 }) => {
   const query = useInfiniteQuery({
     queryKey: ['messages', roomId],
     queryFn: fetchMessages,
-    getNextPageParam: (lastPage) => lastPage.meta?.cursor || null,
+    getNextPageParam: (lastPage) => lastPage.meta?.cursor || undefined,
     enabled: !!roomId,
     staleTime: 0,
+    // Refetch on mount so messages always load after navigation/refresh
+    refetchOnMount: true,
   });
 
-  const { data } = query;
+  const { data, isFetchingNextPage, hasNextPage, fetchNextPage } = query;
 
-  // React Query v5 compatibility: onSuccess was removed from useInfiniteQuery,
-  // so we use a useEffect to listen for data changes and load them into the store
+  // Sync query data → Zustand store whenever data changes.
+  // This replaces the broken isFirstLoad pattern. Every time React Query
+  // has data (fresh fetch, cache hit, or page append), we flatten all pages
+  // and push them into the store.
   useEffect(() => {
     if (data) {
-      const allMessages = data.pages.flatMap((p) => p.data?.messages || []).reverse();
+      const allMessages = data.pages
+        .flatMap((p) => p.data?.messages || [])
+        .reverse();
       const lastPage = data.pages[data.pages.length - 1];
-      chatStore.setMessages(roomId, allMessages, lastPage.meta?.cursor, lastPage.meta?.hasMore);
+      chatStore.setMessages(
+        roomId,
+        allMessages,
+        lastPage.meta?.cursor,
+        lastPage.meta?.hasMore
+      );
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, roomId]);
 
   const sendMessageMutation = useMutation({
@@ -83,11 +94,16 @@ export const useMessages = ({ conversationId, groupId, limit = 30 }) => {
     query,
     messages: chatStore.messages[roomId] || [],
     hasMore: chatStore.hasMore[roomId],
+    // Expose infinite query pagination for parent components
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: query.isLoading,
     sendMessage: sendMessageMutation.mutate,
+    isSending: sendMessageMutation.isPending,
     editMessage: editMessageMutation.mutate,
     deleteMessage: deleteMessageMutation.mutate,
     reactToMessage: reactMutation.mutate,
-    isSending: sendMessageMutation.isPending,
   };
 };
 

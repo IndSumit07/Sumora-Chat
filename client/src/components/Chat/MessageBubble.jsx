@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import {
-  Check, CheckCheck, Pencil, Trash2, MoreHorizontal,
+  Check, CheckCheck, Trash2, MoreHorizontal,
   File, Download, Play, Pause, Image as ImageIcon, Mic
 } from 'lucide-react';
 import Avatar from '../ui/Avatar.jsx';
@@ -45,8 +45,6 @@ export default function MessageBubble({
 
   const handleReact = async (emoji) => {
     try {
-      const api = isGroup ? groupApi : messageApi;
-      // Use group message endpoint vs DM message endpoint
       const response = await messageApi.reactToMessage(message._id, { emoji });
       updateReactions(roomId, message._id, response.data.data.reactions);
     } catch {
@@ -293,17 +291,6 @@ export default function MessageBubble({
             >
               <span>😊</span> React
             </button>
-            {isOwn && message.type === MESSAGE_TYPES.TEXT && (
-              <button
-                className="context-menu-item w-full"
-                onClick={() => {
-                  // Trigger edit mode — bubble communicates via parent
-                  setShowContextMenu(false);
-                }}
-              >
-                <Pencil size={14} /> Edit
-              </button>
-            )}
             <button
               className="context-menu-item w-full"
               onClick={() => handleDelete('me')}

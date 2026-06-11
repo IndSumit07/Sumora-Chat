@@ -2,12 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Smile, Mic, X, Image as ImageIcon, File, Loader } from 'lucide-react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import { useMessages } from '../../hooks/useMessages.js';
 import { useTyping } from '../../hooks/useTyping.js';
 import { useMediaUpload } from '../../hooks/useMediaUpload.js';
 import { MESSAGE_TYPES } from '../../utils/constants.js';
 
-export default function MessageInput({ conversationId, groupId, onMessageSent }) {
+export default function MessageInput({ conversationId, groupId, sendMessage, isSending, onMessageSent }) {
   const [content, setContent] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
   const inputRef = useRef(null);
@@ -16,7 +15,7 @@ export default function MessageInput({ conversationId, groupId, onMessageSent })
   const isGroup = !!groupId;
   const roomId = conversationId || groupId;
 
-  const { sendMessage, isSending } = useMessages({ conversationId, groupId });
+  // sendMessage and isSending now come from props (parent's useMessages hook)
   const { handleInputChange, handleBlur, sendTypingStop } = useTyping(conversationId, groupId);
   const {
     uploading, uploadProgress, selectedFile, previewUrl, fileInputRef,
@@ -77,14 +76,21 @@ export default function MessageInput({ conversationId, groupId, onMessageSent })
       messageData.duration = uploadedMedia.duration;
     }
 
+    // Clear input immediately for snappy UX
+    const prevContent = content;
+    setContent('');
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
+
     sendMessage(messageData, {
       onSuccess: () => {
-        setContent('');
-        if (inputRef.current) {
-          inputRef.current.style.height = 'auto';
-        }
         if (onMessageSent) onMessageSent();
-      }
+      },
+      onError: () => {
+        // Restore content on failure
+        setContent(prevContent);
+      },
     });
   };
 

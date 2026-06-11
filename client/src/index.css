@@ -8,22 +8,22 @@
    CSS Custom Properties
    ======================== */
 :root {
-  --bg-primary: #0a0f14;
-  --bg-secondary: #0d1117;
-  --bg-sidebar: #111827;
-  --bg-elevated: #1a2332;
-  --bg-hover: #1e293b;
-  --border: #1e293b;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --accent: #25d366;
-  --accent-dark: #128c7e;
-  --bubble-sent: #005c4b;
-  --bubble-received: #1e293b;
-  --scrollbar-track: #0d1117;
-  --scrollbar-thumb: #1e293b;
-  --scrollbar-thumb-hover: #334155;
+  --bg-primary: #09090b;
+  --bg-secondary: #0c0c0e;
+  --bg-sidebar: #111113;
+  --bg-elevated: #18181b;
+  --bg-hover: #27272a;
+  --border: #27272a;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --accent: #3b82f6;
+  --accent-dark: #2563eb;
+  --bubble-sent: #18181b;
+  --bubble-received: #09090b;
+  --scrollbar-track: #09090b;
+  --scrollbar-thumb: #27272a;
+  --scrollbar-thumb-hover: #3f3f46;
 }
 
 /* ========================
@@ -84,15 +84,15 @@ body {
    Selection
    ======================== */
 ::selection {
-  background: rgba(37, 211, 102, 0.2);
-  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
 }
 
 /* ========================
    Focus styles
    ======================== */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--border);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -104,13 +104,13 @@ body {
   /* Input */
   .input {
     @apply w-full bg-bg-elevated text-text-primary border border-border rounded-lg px-4 py-3 text-base placeholder:text-text-muted
-    focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/50 transition-all duration-200;
+    focus:outline-none focus:ring-1 focus:ring-border focus:border-border transition-all duration-200;
   }
 
   /* Button variants */
   .btn-primary {
-    @apply flex items-center justify-center gap-2 bg-accent text-white font-semibold px-6 py-3 rounded-xl
-    hover:bg-accent-light active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+    @apply flex items-center justify-center gap-2 bg-text-primary text-bg-primary font-semibold px-6 py-3 rounded-xl
+    hover:opacity-90 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed
     disabled:active:scale-100;
   }
 
@@ -145,7 +145,7 @@ body {
 
   /* Badge */
   .badge {
-    @apply inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold bg-accent text-white rounded-full;
+    @apply inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold bg-text-primary text-bg-primary rounded-full;
   }
 
   .badge-danger {
@@ -159,12 +159,12 @@ body {
 
   /* Message bubble */
   .bubble-sent {
-    @apply bg-bubble-sent rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[70%] shadow-elevated
+    @apply bg-bubble-sent border border-border rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[70%] shadow-elevated
     animate-message-in;
   }
 
   .bubble-received {
-    @apply bg-bubble-received rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[70%] shadow-elevated
+    @apply bg-bubble-received border border-border rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[70%] shadow-elevated
     animate-message-in;
   }
 
@@ -210,7 +210,7 @@ body {
   }
 
   .sidebar-item-active {
-    @apply bg-accent/10 hover:bg-accent/15;
+    @apply bg-bg-hover border border-border;
   }
 
   /* Empty state */
@@ -221,7 +221,7 @@ body {
   /* Message input */
   .message-input {
     @apply w-full bg-bg-elevated text-text-primary rounded-2xl px-4 py-3 text-base resize-none
-    focus:outline-none focus:ring-1 focus:ring-accent/30 placeholder:text-text-muted
+    focus:outline-none focus:ring-1 focus:ring-border placeholder:text-text-muted
     min-h-[48px] max-h-[120px] transition-all duration-200;
   }
 
@@ -274,7 +274,7 @@ body {
 
   /* Gradient text */
   .gradient-text {
-    background: linear-gradient(135deg, #25d366, #128c7e);
+    background: linear-gradient(135deg, #ffffff, #a1a1aa);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -323,13 +323,12 @@ body {
 }
 
 .otp-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.15);
+  border-color: var(--text-primary);
 }
 
 .otp-input.filled {
-  border-color: var(--accent);
-  background: rgba(37, 211, 102, 0.05);
+  border-color: var(--border);
+  background: var(--bg-hover);
 }
 
 /* ========================
@@ -343,12 +342,12 @@ body {
    Emoji Picker Override
    ======================== */
 em-emoji-picker {
-  --color-border: #1e293b;
-  --color-border-over: #334155;
-  --rgb-background: 17, 24, 39;
-  --rgb-input: 26, 35, 50;
-  --rgb-color: 241, 245, 249;
-  --rgb-accent: 37, 211, 102;
+  --color-border: #27272a;
+  --color-border-over: #3f3f46;
+  --rgb-background: 24, 24, 27;
+  --rgb-input: 39, 39, 42;
+  --rgb-color: 250, 250, 250;
+  --rgb-accent: 255, 255, 255;
   height: 380px;
   width: 320px;
 }
@@ -385,7 +384,7 @@ em-emoji-picker {
 .waveform-bar {
   width: 3px;
   border-radius: 3px;
-  background: var(--accent);
+  background: var(--text-primary);
   animation: waveform 1s ease-in-out infinite;
 }
 

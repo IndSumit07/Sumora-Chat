@@ -5,44 +5,44 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Main backgrounds
+        // Main backgrounds - Professional dark theme
         bg: {
-          primary: '#0a0f14',
-          secondary: '#0d1117',
-          sidebar: '#111827',
-          elevated: '#1a2332',
-          hover: '#1e293b',
+          primary: '#09090b', // Deepest black/gray
+          secondary: '#0c0c0e',
+          sidebar: '#111113', // Very dark slate
+          elevated: '#18181b', // Elevated cards/modals
+          hover: '#27272a',
         },
         // Borders
         border: {
-          DEFAULT: '#1e293b',
-          subtle: '#162033',
-          strong: '#334155',
+          DEFAULT: '#27272a',
+          subtle: '#18181b',
+          strong: '#3f3f46',
         },
         // Text
         text: {
-          primary: '#f1f5f9',
-          secondary: '#94a3b8',
-          muted: '#64748b',
-          accent: '#25d366',
+          primary: '#fafafa', // Pure white text
+          secondary: '#a1a1aa', // Muted text
+          muted: '#71717a', // Very muted
+          accent: '#ffffff',
         },
-        // Accent (WhatsApp-like green but unique)
+        // Accent - Professional monochrome/subtle blue instead of WhatsApp green
         accent: {
-          DEFAULT: '#25d366',
-          dark: '#128c7e',
-          light: '#34d66d',
-          subtle: '#0a2a1a',
+          DEFAULT: '#3b82f6', // Clean, professional blue
+          dark: '#2563eb',
+          light: '#60a5fa',
+          subtle: '#1d4ed820', // Blue with opacity
         },
         // Message bubbles
         bubble: {
-          sent: '#005c4b',
-          sentHover: '#006b57',
-          received: '#1e293b',
-          receivedHover: '#243447',
+          sent: '#18181b', // Dark gray for sent
+          sentHover: '#27272a',
+          received: '#09090b', // Black for received
+          receivedHover: '#18181b',
         },
         // Status colors
-        online: '#25d366',
-        offline: '#64748b',
+        online: '#10b981', // Emerald for online
+        offline: '#71717a',
         danger: '#ef4444',
         warning: '#f59e0b',
         info: '#3b82f6',
@@ -75,13 +75,13 @@ export default {
         full: '9999px',
       },
       boxShadow: {
-        'glow-accent': '0 0 20px rgba(37, 211, 102, 0.15)',
-        'glow-accent-sm': '0 0 10px rgba(37, 211, 102, 0.1)',
-        card: '0 4px 24px rgba(0, 0, 0, 0.3)',
-        'card-lg': '0 8px 48px rgba(0, 0, 0, 0.4)',
-        elevated: '0 2px 8px rgba(0, 0, 0, 0.3)',
-        menu: '0 8px 32px rgba(0, 0, 0, 0.5)',
-        modal: '0 24px 64px rgba(0, 0, 0, 0.6)',
+        'glow-accent': '0 0 20px rgba(255, 255, 255, 0.05)',
+        'glow-accent-sm': '0 0 10px rgba(255, 255, 255, 0.02)',
+        card: '0 4px 24px rgba(0, 0, 0, 0.5)',
+        'card-lg': '0 8px 48px rgba(0, 0, 0, 0.8)',
+        elevated: '0 2px 8px rgba(0, 0, 0, 0.4)',
+        menu: '0 8px 32px rgba(0, 0, 0, 0.6)',
+        modal: '0 24px 64px rgba(0, 0, 0, 0.8)',
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',

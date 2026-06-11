@@ -47,20 +47,7 @@ export default function ProfilePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.fullName.trim()) return;
-
-    setLoading(true);
-    try {
-      // Assuming a generic PUT /auth/me for updates
-      // Using axios instance manually here since we didn't define updateMe in authApi
-      // Actually we didn't add an update profile endpoint. Let's assume we just have avatar update for now
-      // Or if there's no endpoint, we can just simulate it.
-      toast.error('Profile update (name/bio) endpoint not implemented in backend yet.');
-    } catch (err) {
-      toast.error('Failed to update profile');
-    } finally {
-      setLoading(false);
-    }
+    // Do nothing for now
   };
 
   return (
@@ -114,13 +101,15 @@ export default function ProfilePage() {
               />
             </div>
 
-            <div className="pt-4 space-y-4 border-t border-border">
+            <div className="pt-4 space-y-4 border-t border-border opacity-60">
               <Input
                 name="fullName"
                 label="Full Name"
                 value={form.fullName}
                 onChange={handleChange}
                 leftIcon={User}
+                disabled
+                hint="Name changes coming soon"
               />
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-text-secondary">Bio</label>
@@ -130,12 +119,13 @@ export default function ProfilePage() {
                   onChange={handleChange}
                   className="input min-h-[100px] resize-none"
                   placeholder="Tell people about yourself..."
+                  disabled
                 />
               </div>
             </div>
 
-            <Button type="submit" className="w-full" loading={loading} disabled={form.fullName === user?.fullName && form.bio === user?.bio}>
-              Save Changes
+            <Button type="button" className="w-full" disabled>
+              Save Changes (Coming Soon)
             </Button>
           </form>
         </div>

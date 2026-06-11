@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useChatStore } from '../../store/chatStore.js';
 import { useAuthStore } from '../../store/authStore.js';
+import { useMessages } from '../../hooks/useMessages.js';
 import groupApi from '../../api/group.api.js';
 import ChatHeader from './ChatHeader.jsx';
 import MessageList from './MessageList.jsx';
@@ -10,9 +11,8 @@ import { InlineLoader } from '../ui/Spinner.jsx';
 
 export default function GroupChatWindow({ groupId }) {
   const { user } = useAuthStore();
-  const { setMessages, hasMore, cursors, messages } = useChatStore();
+  const { messages: allMessages } = useChatStore();
   const bottomRef = useRef(null);
-  const isFirstLoad = useRef(true);
 
   // Fetch group details
   const { data: groupData, isLoading: groupLoading } = useQuery({
@@ -24,42 +24,38 @@ export default function GroupChatWindow({ groupId }) {
     staleTime: 1000 * 60,
   });
 
-  // Fetch initial group messages
-  // NOTE: onSuccess was removed in React Query v5 — use useEffect below
-  const { data: msgData, isLoading: messagesLoading } = useQuery({
-    queryKey: ['groupMessages', groupId],
-    queryFn: async ({ pageParam = null }) => {
-      const params = { limit: 30 };
-      if (pageParam) params.cursor = pageParam;
-      const response = await groupApi.getMessages(groupId, params);
-      return response.data;
-    },
-    staleTime: 0,
-  });
+  // Single source of truth for messages — no more dual query
+  const {
+    isLoading: messagesLoading,
+    hasMore,
+    fetchNextPage,
+    isFetchingNextPage,
+    sendMessage,
+    isSending,
+  } = useMessages({ groupId });
 
-  // Load messages into store when data arrives (replaces removed onSuccess)
-  useEffect(() => {
-    if (msgData && isFirstLoad.current) {
-      const msgs = [...(msgData?.data?.messages ?? [])].reverse();
-      setMessages(groupId, msgs, msgData.meta?.cursor, msgData.meta?.hasMore);
-      isFirstLoad.current = false;
-      setTimeout(() => scrollToBottom('instant'), 50);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [msgData, groupId]);
-
-  // Reset first-load flag when group changes
-  useEffect(() => {
-    isFirstLoad.current = true;
-  }, [groupId]);
+  const roomMessages = allMessages[groupId] || [];
 
   const scrollToBottom = useCallback((behavior = 'smooth') => {
     bottomRef.current?.scrollIntoView({ behavior });
   }, []);
 
-  const roomMessages = messages[groupId] || [];
-  const prevMsgCount = useRef(roomMessages.length);
+  // Scroll to bottom on initial load
+  const initialScrollDone = useRef(false);
+  useEffect(() => {
+    if (roomMessages.length > 0 && !initialScrollDone.current) {
+      initialScrollDone.current = true;
+      setTimeout(() => scrollToBottom('instant'), 50);
+    }
+  }, [roomMessages.length, scrollToBottom]);
 
+  // Reset initial scroll flag when group changes
+  useEffect(() => {
+    initialScrollDone.current = false;
+  }, [groupId]);
+
+  // Scroll to bottom when own message arrives
+  const prevMsgCount = useRef(roomMessages.length);
   useEffect(() => {
     if (roomMessages.length > prevMsgCount.current) {
       const lastMsg = roomMessages[roomMessages.length - 1];
@@ -67,20 +63,15 @@ export default function GroupChatWindow({ groupId }) {
       if (isOwnMessage) {
         scrollToBottom('smooth');
       }
-      prevMsgCount.current = roomMessages.length;
     }
+    prevMsgCount.current = roomMessages.length;
   }, [roomMessages.length, user?._id, scrollToBottom]);
 
-  const loadMoreMessages = useCallback(async () => {
-    const cursor = cursors[groupId];
-    if (!cursor) return;
-    // Fetch next page manually
-    const params = { limit: 30, cursor };
-    const response = await groupApi.getMessages(groupId, params);
-    const data = response.data;
-    const older = [...(data?.data?.messages ?? [])].reverse();
-    setMessages(groupId, [...older, ...roomMessages], data.meta?.cursor, data.meta?.hasMore);
-  }, [cursors, groupId, roomMessages, setMessages]);
+  const loadMoreMessages = useCallback(() => {
+    if (!isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [isFetchingNextPage, fetchNextPage]);
 
   if (groupLoading || messagesLoading) {
     return (
@@ -104,15 +95,17 @@ export default function GroupChatWindow({ groupId }) {
         messages={roomMessages}
         currentUserId={user?._id}
         groupId={groupId}
-        hasMore={hasMore[groupId]}
+        hasMore={hasMore}
         onLoadMore={loadMoreMessages}
-        isLoadingMore={false}
+        isLoadingMore={isFetchingNextPage}
         bottomRef={bottomRef}
         isGroup={true}
       />
 
       <MessageInput
         groupId={groupId}
+        sendMessage={sendMessage}
+        isSending={isSending}
         onMessageSent={() => scrollToBottom('smooth')}
       />
     </div>

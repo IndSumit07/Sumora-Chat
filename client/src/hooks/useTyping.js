@@ -7,24 +7,6 @@ export const useTyping = (conversationId, groupId) => {
   const typingTimeoutRef = useRef(null);
   const isTypingRef = useRef(false);
 
-  const sendTypingStart = useCallback(() => {
-    if (!socket?.connected) return;
-    if (!isTypingRef.current) {
-      isTypingRef.current = true;
-      socket.emit('typingStart', { conversationId, groupId });
-    }
-
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Auto-stop after debounce
-    typingTimeoutRef.current = setTimeout(() => {
-      sendTypingStop();
-    }, TYPING_DEBOUNCE_MS);
-  }, [socket, conversationId, groupId]);
-
   const sendTypingStop = useCallback(() => {
     if (!socket?.connected) return;
     if (isTypingRef.current) {
@@ -35,6 +17,22 @@ export const useTyping = (conversationId, groupId) => {
       clearTimeout(typingTimeoutRef.current);
     }
   }, [socket, conversationId, groupId]);
+
+  const sendTypingStart = useCallback(() => {
+    if (!socket?.connected) return;
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      socket.emit('typingStart', { conversationId, groupId });
+    }
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      sendTypingStop();
+    }, TYPING_DEBOUNCE_MS);
+  }, [socket, conversationId, groupId, sendTypingStop]);
 
   const handleInputChange = useCallback(() => {
     sendTypingStart();

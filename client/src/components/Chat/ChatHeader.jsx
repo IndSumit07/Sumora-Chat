@@ -1,4 +1,4 @@
-import { Phone, Video, MoreVertical, ArrowLeft, Info } from 'lucide-react';
+import { MoreVertical, ArrowLeft, Info } from 'lucide-react';
 import Avatar from '../ui/Avatar.jsx';
 import { useUIStore } from '../../store/uiStore.js';
 import { formatLastSeen } from '../../utils/formatters.js';
@@ -79,12 +79,6 @@ export default function ChatHeader({
 
       {/* Action buttons */}
       <div className="flex items-center gap-1 flex-shrink-0">
-        <button className="btn-icon" aria-label="Voice call" title="Voice call">
-          <Phone size={18} />
-        </button>
-        <button className="btn-icon" aria-label="Video call" title="Video call">
-          <Video size={18} />
-        </button>
         <button
           className="btn-icon"
           onClick={toggleInfoPanel}

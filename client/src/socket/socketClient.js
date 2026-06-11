@@ -2,7 +2,7 @@ import toast from 'react-hot-toast';
 import { useChatStore } from '../store/chatStore.js';
 import { useNotificationStore } from '../store/notificationStore.js';
 import { useUIStore } from '../store/uiStore.js';
-import { useSocketStore } from '../store/socketStore.js';
+import { useAuthStore } from '../store/authStore.js';
 
 const EVENTS = {
   NEW_MESSAGE: 'newMessage',
@@ -24,15 +24,25 @@ const EVENTS = {
   NOTIFICATION: 'notification',
 };
 
-let listenersInitialized = false;
+let heartbeatInterval = null;
 
 /**
  * Initialize all socket event listeners.
- * Called once after authentication.
+ * Called once after authentication. Safe to call multiple times —
+ * removes all existing listeners before re-attaching.
  */
 export const initSocketListeners = (socket) => {
-  if (listenersInitialized) return;
-  listenersInitialized = true;
+  if (!socket) return;
+
+  // Clean up any previous listeners to prevent duplicates
+  // (e.g. after logout → re-login, or socket reconnect)
+  Object.values(EVENTS).forEach((event) => socket.off(event));
+  socket.off('disconnect');
+
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
 
   const chatStore = useChatStore.getState;
   const notifStore = useNotificationStore.getState;
@@ -146,8 +156,8 @@ export const initSocketListeners = (socket) => {
   // Friend Request
   // ========================
   socket.on(EVENTS.FRIEND_REQUEST, (data) => {
+    // addNotification handles unread increment internally
     notifStore().addNotification(data.notification);
-    notifStore().incrementUnread();
     toast(`${data.request?.sender?.fullName} sent you a friend request`, {
       icon: '👋',
       duration: 5000,
@@ -189,7 +199,8 @@ export const initSocketListeners = (socket) => {
   // Member Removed from Group
   // ========================
   socket.on(EVENTS.MEMBER_REMOVED, (data) => {
-    const { user } = useSocketStore.getState();
+    // BUG FIX: was using useSocketStore which doesn't have user — use useAuthStore
+    const { user } = useAuthStore.getState();
     // If current user was removed
     if (data.userId === user?._id) {
       chatStore().removeGroup(data.groupId);
@@ -217,14 +228,14 @@ export const initSocketListeners = (socket) => {
   // General Notification
   // ========================
   socket.on(EVENTS.NOTIFICATION, (notification) => {
+    // addNotification handles unread increment internally
     notifStore().addNotification(notification);
-    notifStore().incrementUnread();
   });
 
   // ========================
   // Heartbeat (keep online)
   // ========================
-  const heartbeatInterval = setInterval(() => {
+  heartbeatInterval = setInterval(() => {
     if (socket.connected) {
       socket.emit('heartbeat');
     }
@@ -232,8 +243,10 @@ export const initSocketListeners = (socket) => {
 
   // Cleanup on disconnect
   socket.on('disconnect', () => {
-    clearInterval(heartbeatInterval);
-    listenersInitialized = false;
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
+    }
   });
 };
 
